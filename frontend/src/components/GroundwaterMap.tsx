@@ -56,22 +56,22 @@ function Legend() {
   ]
 
   return (
-    <div className="absolute bottom-4 left-4 z-[1000] px-3 py-2.5" style={{
+    <div className="absolute bottom-3 left-3 md:bottom-4 md:left-4 z-[1000] px-2.5 py-2 md:px-3 md:py-2.5" style={{
       background: 'var(--bg-glass)',
       backdropFilter: 'blur(16px)',
       border: '1px solid var(--border-medium)',
       borderRadius: 'var(--radius-md)',
       boxShadow: 'var(--shadow-elevated)',
     }}>
-      <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-1.5 font-medium">Category</p>
+      <p className="text-[9px] md:text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-1.5 font-medium">Category</p>
       <div className="space-y-1">
         {items.map(item => (
           <div key={item.label} className="flex items-center gap-2">
             <span
-              className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+              className="w-2 h-2 md:w-2.5 md:h-2.5 rounded-full flex-shrink-0"
               style={{ backgroundColor: item.color, boxShadow: `0 0 6px ${item.color}60` }}
             />
-            <span className="text-[11px] text-[var(--text-secondary)]">{item.label}</span>
+            <span className="text-[10px] md:text-[11px] text-[var(--text-secondary)]">{item.label}</span>
           </div>
         ))}
       </div>
@@ -83,6 +83,7 @@ export default function GroundwaterMap() {
   const [blocks, setBlocks] = useState<BlockData[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<string>('all')
+  const [error, setError] = useState(false)
 
   useEffect(() => {
     fetch(`${API}/api/blocks`)
@@ -91,7 +92,10 @@ export default function GroundwaterMap() {
         setBlocks(data)
         setLoading(false)
       })
-      .catch(() => setLoading(false))
+      .catch(() => {
+        setError(true)
+        setLoading(false)
+      })
   }, [])
 
   const filtered = filter === 'all' ? blocks : blocks.filter(b => b.latest_category === filter)
@@ -104,7 +108,7 @@ export default function GroundwaterMap() {
   return (
     <div className="glass-card overflow-hidden animate-fade-in-up">
       {/* Header */}
-      <div className="px-5 py-4 border-b border-[var(--border-subtle)]">
+      <div className="px-4 md:px-5 py-3 md:py-4 border-b border-[var(--border-subtle)]">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
             <h3 className="text-sm font-semibold text-[var(--text-primary)] uppercase tracking-wider">
@@ -136,12 +140,24 @@ export default function GroundwaterMap() {
       </div>
 
       {/* Map */}
-      <div className="relative h-[400px] sm:h-[500px] lg:h-[560px]">
+      <div className="relative h-[350px] sm:h-[450px] md:h-[500px] lg:h-[560px]">
         {loading ? (
           <div className="absolute inset-0 flex items-center justify-center" style={{ background: 'var(--bg-surface)' }}>
             <div className="text-center animate-fade-in">
               <div className="w-8 h-8 border-2 border-[var(--accent-amber)] border-t-transparent rounded-full animate-spin mx-auto mb-2" />
               <p className="text-xs text-[var(--text-muted)]">Loading map data...</p>
+            </div>
+          </div>
+        ) : error ? (
+          <div className="absolute inset-0 flex items-center justify-center" style={{ background: 'var(--bg-surface)' }}>
+            <div className="text-center animate-fade-in px-4">
+              <div className="w-10 h-10 mx-auto mb-3 rounded-xl flex items-center justify-center" style={{ background: 'var(--danger-glow)' }}>
+                <svg className="w-5 h-5 text-[var(--danger)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126z" />
+                </svg>
+              </div>
+              <p className="text-sm text-[var(--text-secondary)] mb-1">Failed to load map data</p>
+              <p className="text-xs text-[var(--text-muted)]">Ensure backend is running on port 8000</p>
             </div>
           </div>
         ) : (
@@ -218,7 +234,7 @@ function FilterButton({ label, count, active, onClick, color }: {
   return (
     <button
       onClick={onClick}
-      className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-all duration-150 flex items-center gap-1.5 border ${
+      className={`px-2 md:px-2.5 py-1 rounded-md text-[10px] md:text-[11px] font-medium transition-all duration-150 flex items-center gap-1.5 border ${
         active
           ? 'border-[var(--accent-amber)] text-[var(--accent-amber)]'
           : 'border-[var(--border-subtle)] text-[var(--text-muted)] hover:border-[var(--accent-amber)]/30 hover:text-[var(--text-secondary)]'
@@ -226,9 +242,9 @@ function FilterButton({ label, count, active, onClick, color }: {
       style={active ? { background: 'var(--accent-amber-glow)' } : { background: 'var(--bg-glass)' }}
     >
       {color && (
-        <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: color, boxShadow: `0 0 4px ${color}60` }} />
+        <span className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full flex-shrink-0" style={{ backgroundColor: color, boxShadow: `0 0 4px ${color}60` }} />
       )}
-      {label}
+      <span className="hidden sm:inline">{label}</span>
       <span className={active ? 'opacity-70' : 'text-[var(--text-faint)]'} style={{ fontFamily: 'var(--font-mono)' }}>{count}</span>
     </button>
   )

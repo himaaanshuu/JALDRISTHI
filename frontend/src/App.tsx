@@ -1,4 +1,4 @@
-import { useEffect, useState, lazy, Suspense } from 'react'
+import { useEffect, useState, lazy, Suspense, useCallback } from 'react'
 import {
   PieChart, Pie, Cell, ResponsiveContainer, Tooltip,
   XAxis, YAxis, CartesianGrid, AreaChart, Area,
@@ -64,6 +64,22 @@ const CATEGORY_GLOW: Record<string, string> = {
   'Over-Exploited': '0 0 12px rgba(168, 85, 247, 0.3)',
 }
 
+const NAV_ITEMS = [
+  {
+    section: 'OVERVIEW',
+    items: [
+      { id: 'dashboard' as Page, label: 'Dashboard', icon: 'grid' },
+      { id: 'map' as Page, label: 'Map View', icon: 'map' },
+    ],
+  },
+  {
+    section: 'INTELLIGENCE',
+    items: [
+      { id: 'assistant' as Page, label: 'AI Assistant', icon: 'sparkle' },
+    ],
+  },
+]
+
 export default function App() {
   const [page, setPage] = useState<Page>('dashboard')
   const [health, setHealth] = useState<HealthStatus | null>(null)
@@ -74,32 +90,51 @@ export default function App() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
+  const [retryCount, setRetryCount] = useState(0)
+
+  const fetchData = useCallback(async () => {
+    try {
+      setLoading(true)
+      setError(null)
+      const [h, cat, tr, top, st] = await Promise.all([
+        fetch(`${API}/api/health`).then(r => r.json()),
+        fetch(`${API}/api/analytics/category-distribution`).then(r => r.json()),
+        fetch(`${API}/api/analytics/trend`).then(r => r.json()),
+        fetch(`${API}/api/analytics/top-extraction?limit=5`).then(r => r.json()),
+        fetch(`${API}/api/states`).then(r => r.json()),
+      ])
+      setHealth(h)
+      setCategories(cat)
+      setTrend(tr)
+      setTopBlocks(top)
+      setStates(st)
+    } catch {
+      setError('Cannot connect to backend at ' + API)
+    } finally {
+      setLoading(false)
+    }
+  }, [retryCount])
 
   useEffect(() => {
-    Promise.all([
-      fetch(`${API}/api/health`).then(r => r.json()),
-      fetch(`${API}/api/analytics/category-distribution`).then(r => r.json()),
-      fetch(`${API}/api/analytics/trend`).then(r => r.json()),
-      fetch(`${API}/api/analytics/top-extraction?limit=5`).then(r => r.json()),
-      fetch(`${API}/api/states`).then(r => r.json()),
-    ])
-      .then(([h, cat, tr, top, st]) => {
-        setHealth(h)
-        setCategories(cat)
-        setTrend(tr)
-        setTopBlocks(top)
-        setStates(st)
-        setLoading(false)
-      })
-      .catch(() => {
-        setError('Cannot connect to backend at ' + API)
-        setLoading(false)
-      })
+    fetchData()
+  }, [fetchData])
+
+  const navigateTo = useCallback((p: Page) => {
+    setPage(p)
+    setMobileMenuOpen(false)
+  }, [])
+
+  const handleSearch = useCallback((q: string) => {
+    setSearchQuery(q)
+    if (q.trim()) {
+      setPage('assistant')
+    }
   }, [])
 
   if (loading) return <LoadingScreen />
-  if (error) return <ErrorScreen message={error} />
+  if (error) return <ErrorScreen message={error} onRetry={() => setRetryCount(c => c + 1)} />
 
   const totalUnits = categories.reduce((s, c) => s + c.count, 0)
   const safeUnits = categories.find(c => c.category === 'Safe')?.count ?? 0
@@ -109,18 +144,30 @@ export default function App() {
 
   return (
     <div className="flex h-screen bg-[var(--bg-deep)] overflow-hidden topo-bg">
+      {/* Mobile Overlay */}
+      <div
+        className={`sidebar-overlay ${mobileMenuOpen ? 'active' : ''}`}
+        onClick={() => setMobileMenuOpen(false)}
+        aria-hidden="true"
+      />
+
       {/* Sidebar */}
-      <aside className={`${sidebarCollapsed ? 'w-[72px]' : 'w-[248px]'} bg-[var(--bg-surface)]/80 backdrop-blur-xl border-r border-[var(--border-subtle)] flex flex-col transition-all duration-300 flex-shrink-0 animate-slide-in-left`}>
+      <aside
+        className={`
+          ${sidebarCollapsed && !mobileMenuOpen ? 'w-[72px]' : 'w-[248px]'}
+          ${mobileMenuOpen ? 'fixed inset-y-0 left-0 z-50 w-[280px] animate-slide-in-top' : 'hidden md:flex'}
+          bg-[var(--bg-surface)]/95 backdrop-blur-xl border-r border-[var(--border-subtle)] flex-col transition-all duration-300 flex-shrink-0
+        `}
+      >
         {/* Brand */}
         <div className="px-5 py-5 border-b border-[var(--border-subtle)]">
-          <a href="#" onClick={(e) => { e.preventDefault(); setPage('dashboard') }} className="cursor-pointer group">
-            {!sidebarCollapsed && (
+          <a href="#" onClick={(e) => { e.preventDefault(); navigateTo('dashboard') }} className="cursor-pointer group">
+            {(!sidebarCollapsed || mobileMenuOpen) ? (
               <div className="flex items-baseline gap-0.5">
                 <span className="text-2xl text-[var(--accent-amber)] tracking-tight group-hover:opacity-80 transition-opacity" style={{ fontFamily: 'var(--font-serif)' }}>जल</span>
                 <span className="text-xl font-semibold text-[var(--text-primary)] tracking-tight" style={{ fontFamily: 'var(--font-sans)' }}>DRISHTI</span>
               </div>
-            )}
-            {sidebarCollapsed && (
+            ) : (
               <span className="text-xl text-[var(--accent-amber)] block text-center" style={{ fontFamily: 'var(--font-serif)' }}>ज</span>
             )}
           </a>
@@ -128,51 +175,28 @@ export default function App() {
 
         {/* Nav */}
         <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-          <SidebarSection label="OVERVIEW" collapsed={sidebarCollapsed}>
-            <SidebarItem
-              icon={<svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z" /></svg>}
-              label="Dashboard"
-              active={page === 'dashboard'}
-              onClick={() => setPage('dashboard')}
-              collapsed={sidebarCollapsed}
-            />
-            <SidebarItem
-              icon={<svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9 6.75V15m6-6v8.25m.503 4.498l4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.252a1.125 1.125 0 00-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0z" /></svg>}
-              label="Map View"
-              active={page === 'map'}
-              onClick={() => setPage('map')}
-              collapsed={sidebarCollapsed}
-            />
-          </SidebarSection>
-
-          <SidebarSection label="INTELLIGENCE" collapsed={sidebarCollapsed}>
-            <SidebarItem
-              icon={<svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z" /></svg>}
-              label="AI Assistant"
-              active={page === 'assistant'}
-              onClick={() => setPage('assistant')}
-              collapsed={sidebarCollapsed}
-            />
-            <SidebarItem
-              icon={<svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" /></svg>}
-              label="Trends"
-              collapsed={sidebarCollapsed}
-              onClick={() => setPage('dashboard')}
-            />
-            <SidebarItem
-              icon={<svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" /></svg>}
-              label="Risk Analysis"
-              collapsed={sidebarCollapsed}
-              onClick={() => setPage('assistant')}
-            />
-          </SidebarSection>
+          {NAV_ITEMS.map((section) => (
+            <SidebarSection key={section.section} label={section.section} collapsed={sidebarCollapsed && !mobileMenuOpen}>
+              {section.items.map((item) => (
+                <SidebarItem
+                  key={item.id}
+                  icon={getNavIcon(item.icon)}
+                  label={item.label}
+                  active={page === item.id}
+                  onClick={() => navigateTo(item.id)}
+                  collapsed={sidebarCollapsed && !mobileMenuOpen}
+                />
+              ))}
+            </SidebarSection>
+          ))}
         </nav>
 
-        {/* Collapse toggle */}
-        <div className="px-3 py-3 border-t border-[var(--border-subtle)]">
+        {/* Collapse toggle (desktop only) */}
+        <div className="hidden md:block px-3 py-3 border-t border-[var(--border-subtle)]">
           <button
             onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
             className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs text-[var(--text-muted)] hover:text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)]/50 transition-all"
+            aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           >
             <svg className={`w-4 h-4 transition-transform ${sidebarCollapsed ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M18.75 19.5l-7.5-7.5 7.5-7.5m-6 15L5.25 12l7.5-7.5" />
@@ -185,10 +209,26 @@ export default function App() {
       {/* Main Content */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Top Bar */}
-        <header className="h-14 bg-[var(--bg-surface)]/60 backdrop-blur-xl border-b border-[var(--border-subtle)] flex items-center justify-between px-6 flex-shrink-0 animate-fade-in">
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2 bg-[var(--bg-elevated)]/50 border border-[var(--border-subtle)] rounded-lg px-3 py-2 w-80 focus-within:border-[var(--accent-sky)]/30 focus-within:ring-1 focus-within:ring-[var(--accent-sky)]/20 transition-all">
-              <svg className="w-4 h-4 text-[var(--text-muted)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+        <header className="h-14 bg-[var(--bg-surface)]/60 backdrop-blur-xl border-b border-[var(--border-subtle)] flex items-center justify-between px-4 md:px-6 flex-shrink-0 animate-fade-in">
+          <div className="flex items-center gap-3">
+            {/* Mobile hamburger */}
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="md:hidden w-9 h-9 rounded-lg flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)]/50 transition-all"
+              aria-label="Toggle menu"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                {mobileMenuOpen ? (
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                ) : (
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+                )}
+              </svg>
+            </button>
+
+            {/* Desktop search */}
+            <div className="hidden sm:flex items-center gap-2 bg-[var(--bg-elevated)]/50 border border-[var(--border-subtle)] rounded-lg px-3 py-2 w-64 lg:w-80 focus-within:border-[var(--accent-sky)]/30 focus-within:ring-1 focus-within:ring-[var(--accent-sky)]/20 transition-all">
+              <svg className="w-4 h-4 text-[var(--text-muted)] flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
               </svg>
               <input
@@ -197,7 +237,7 @@ export default function App() {
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && searchQuery.trim()) {
-                    setPage('assistant')
+                    handleSearch(searchQuery)
                   }
                 }}
                 placeholder="Search states, districts..."
@@ -206,7 +246,8 @@ export default function App() {
               {searchQuery && (
                 <button
                   onClick={() => setSearchQuery('')}
-                  className="text-[var(--text-muted)] hover:text-[var(--text-secondary)]"
+                  className="text-[var(--text-muted)] hover:text-[var(--text-secondary)] flex-shrink-0"
+                  aria-label="Clear search"
                 >
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -215,14 +256,18 @@ export default function App() {
               )}
             </div>
           </div>
+
           <div className="flex items-center gap-3">
+            {/* Mobile search toggle */}
+            <MobileSearch query={searchQuery} onSearch={handleSearch} onClear={() => setSearchQuery('')} />
+
             <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium ${
               health?.status === 'healthy'
                 ? 'bg-[var(--safe)]/10 text-[var(--safe)] border border-[var(--safe)]/20'
                 : 'bg-[var(--danger)]/10 text-[var(--danger)] border border-[var(--danger)]/20'
             }`}>
               <span className={`w-1.5 h-1.5 rounded-full ${health?.status === 'healthy' ? 'bg-[var(--safe)]' : 'bg-[var(--danger)]'}`} style={health?.status === 'healthy' ? { animation: 'pulse-glow 2s infinite' } : {}} />
-              {health?.status === 'healthy' ? 'System Online' : 'Offline'}
+              <span className="hidden sm:inline">{health?.status === 'healthy' ? 'System Online' : 'Offline'}</span>
             </div>
           </div>
         </header>
@@ -243,14 +288,14 @@ export default function App() {
             />
           )}
           {page === 'assistant' && (
-            <div className="p-6">
+            <div className="p-4 md:p-6">
               <Suspense fallback={<PageFallback />}>
                 <ChatAssistant initialQuery={searchQuery} />
               </Suspense>
             </div>
           )}
           {page === 'map' && (
-            <div className="p-6">
+            <div className="p-4 md:p-6">
               <Suspense fallback={<PageFallback />}>
                 <GroundwaterMap />
               </Suspense>
@@ -260,6 +305,22 @@ export default function App() {
       </div>
     </div>
   )
+}
+
+// --- Navigation Icon Helper ---
+
+function getNavIcon(icon: string) {
+  const cls = "w-4 h-4"
+  switch (icon) {
+    case 'grid':
+      return <svg className={cls} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z" /></svg>
+    case 'map':
+      return <svg className={cls} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9 6.75V15m6-6v8.25m.503 4.498l4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.252a1.125 1.125 0 00-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0z" /></svg>
+    case 'sparkle':
+      return <svg className={cls} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z" /></svg>
+    default:
+      return null
+  }
 }
 
 // --- Dashboard Page ---
@@ -276,29 +337,31 @@ function DashboardPage({ categories, trend, topBlocks, states, totalUnits, safeU
   avgStage: number
 }) {
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-4 md:p-6 space-y-4 md:space-y-6">
       {/* Page Header */}
       <div className="flex items-center justify-between animate-fade-in-up">
         <div>
-          <h1 className="text-3xl text-[var(--text-primary)]" style={{ fontFamily: 'var(--font-serif)' }}>Dashboard</h1>
-          <p className="text-sm text-[var(--text-muted)] mt-1">Groundwater assessment overview across India</p>
+          <h1 className="text-2xl md:text-3xl text-[var(--text-primary)]" style={{ fontFamily: 'var(--font-serif)' }}>Dashboard</h1>
+          <p className="text-xs md:text-sm text-[var(--text-muted)] mt-1">Groundwater assessment overview across India</p>
         </div>
       </div>
 
       {/* Official Data Source Banner */}
-      <div className="glass-card-static px-4 py-3 flex items-center gap-3 animate-fade-in-up delay-1" style={{ borderColor: 'rgba(14, 165, 233, 0.15)' }}>
-        <div className="flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: 'var(--accent-sky-glow)' }}>
-          <svg className="w-4 h-4 text-[var(--accent-sky)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
-          </svg>
-        </div>
-        <div className="flex-1">
-          <div className="text-[11px] font-semibold text-[var(--accent-sky)]">Source: Central Ground Water Board / IN-GRES</div>
-          <div className="text-[10px] text-[var(--text-muted)]">
-            Official groundwater assessment data from Ministry of Jal Shakti, Government of India
+      <div className="glass-card-static px-3 md:px-4 py-3 flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-3 animate-fade-in-up delay-1" style={{ borderColor: 'rgba(14, 165, 233, 0.15)' }}>
+        <div className="flex items-center gap-3 flex-1">
+          <div className="flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: 'var(--accent-sky-glow)' }}>
+            <svg className="w-4 h-4 text-[var(--accent-sky)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
+            </svg>
+          </div>
+          <div>
+            <div className="text-[11px] font-semibold text-[var(--accent-sky)]">Source: Central Ground Water Board / IN-GRES</div>
+            <div className="text-[10px] text-[var(--text-muted)]">
+              Official groundwater assessment data from Ministry of Jal Shakti, Government of India
+            </div>
           </div>
         </div>
-        <div className="flex-shrink-0 text-right">
+        <div className="flex-shrink-0 sm:text-right">
           <div className="text-[10px] font-medium text-[var(--accent-sky)]">Assessment Years: 2020, 2022, 2024, 2025</div>
           <div className="text-[9px] text-[var(--text-muted)]">
             <a href="https://cgwb.gov.in/en/ground-water-resource-assessment-0" target="_blank" rel="noopener noreferrer" className="hover:text-[var(--text-secondary)] transition-colors">
@@ -309,7 +372,7 @@ function DashboardPage({ categories, trend, topBlocks, states, totalUnits, safeU
       </div>
 
       {/* Stat Cards Row */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="stat-card-grid grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
         <StatCard
           label="Total Assessment Units"
           value={totalUnits.toLocaleString()}
@@ -349,15 +412,15 @@ function DashboardPage({ categories, trend, topBlocks, states, totalUnits, safeU
       </div>
 
       {/* Charts Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="charts-grid grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
         {/* Trend Chart - 2 cols */}
-        <div className="lg:col-span-2 glass-card p-5 animate-fade-in-up delay-5">
+        <div className="trend-chart-col lg:col-span-2 glass-card p-4 md:p-5 animate-fade-in-up delay-5">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h3 className="text-base font-semibold text-[var(--text-primary)]">Extraction Trend</h3>
-              <p className="text-sm text-[var(--text-muted)] mt-0.5">National extraction vs recharge (2020-2025)</p>
+              <h3 className="text-sm md:text-base font-semibold text-[var(--text-primary)]">Extraction Trend</h3>
+              <p className="text-xs md:text-sm text-[var(--text-muted)] mt-0.5">National extraction vs recharge (2020-2025)</p>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="hidden sm:flex items-center gap-3">
               <div className="flex items-center gap-1.5 text-[10px] text-[var(--text-muted)]">
                 <span className="w-2 h-2 rounded-full" style={{ background: 'var(--accent-amber)' }} />
                 Extraction
@@ -371,7 +434,7 @@ function DashboardPage({ categories, trend, topBlocks, states, totalUnits, safeU
               </span>
             </div>
           </div>
-          <div className="h-[280px]">
+          <div className="h-[220px] sm:h-[260px] md:h-[280px]">
             <ResponsiveContainer>
               <AreaChart data={trend} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
                 <defs>
@@ -437,7 +500,7 @@ function DashboardPage({ categories, trend, topBlocks, states, totalUnits, safeU
           </div>
           {/* Trend insight */}
           {trend.length >= 2 && (
-            <div className="mt-3 pt-3 border-t border-[var(--border-subtle)] flex items-center gap-4 text-[11px] text-[var(--text-muted)]">
+            <div className="mt-3 pt-3 border-t border-[var(--border-subtle)] flex flex-wrap items-center gap-2 sm:gap-4 text-[10px] sm:text-[11px] text-[var(--text-muted)]">
               <span>
                 Extraction trend:
                 <span className="font-medium ml-1" style={{
@@ -448,37 +511,33 @@ function DashboardPage({ categories, trend, topBlocks, states, totalUnits, safeU
                 </span>
                 {' '}since {trend[0].assessment_year}
               </span>
-              <span className="w-px h-3 bg-[var(--border-subtle)]" />
+              <span className="hidden sm:inline w-px h-3 bg-[var(--border-subtle)]" />
               <span>
                 Stage: {trend[0].avg_extraction_stage.toFixed(1)}%
                 <span className="mx-1">&rarr;</span>
                 {trend[trend.length - 1].avg_extraction_stage.toFixed(1)}%
-              </span>
-              <span className="w-px h-3 bg-[var(--border-subtle)]" />
-              <span style={{ fontFamily: 'var(--font-mono)' }}>
-                Source: CGWB
               </span>
             </div>
           )}
         </div>
 
         {/* Category Distribution - 1 col */}
-        <div className="glass-card p-5 animate-fade-in-up delay-6">
+        <div className="glass-card p-4 md:p-5 animate-fade-in-up delay-6">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h3 className="text-base font-semibold text-[var(--text-primary)]">Category Split</h3>
-              <p className="text-sm text-[var(--text-muted)] mt-0.5">{totalUnits} blocks total</p>
+              <h3 className="text-sm md:text-base font-semibold text-[var(--text-primary)]">Category Split</h3>
+              <p className="text-xs md:text-sm text-[var(--text-muted)] mt-0.5">{totalUnits} blocks total</p>
             </div>
           </div>
-          <div className="h-[180px]">
+          <div className="h-[160px] md:h-[180px]">
             <ResponsiveContainer>
               <PieChart>
                 <Pie
                   data={categories}
                   cx="50%"
                   cy="50%"
-                  innerRadius={50}
-                  outerRadius={75}
+                  innerRadius={45}
+                  outerRadius={68}
                   paddingAngle={3}
                   dataKey="count"
                   stroke="none"
@@ -511,84 +570,86 @@ function DashboardPage({ categories, trend, topBlocks, states, totalUnits, safeU
       </div>
 
       {/* Bottom Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="bottom-grid grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
         {/* Top Extraction Table */}
-        <div className="lg:col-span-2 glass-card p-5 animate-fade-in-up delay-7">
+        <div className="top-table-col lg:col-span-2 glass-card p-4 md:p-5 animate-fade-in-up delay-7">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h3 className="text-base font-semibold text-[var(--text-primary)]">Top Extraction Regions</h3>
-              <p className="text-sm text-[var(--text-muted)] mt-0.5">Highest groundwater extraction districts</p>
+              <h3 className="text-sm md:text-base font-semibold text-[var(--text-primary)]">Top Extraction Regions</h3>
+              <p className="text-xs md:text-sm text-[var(--text-muted)] mt-0.5">Highest groundwater extraction districts</p>
             </div>
           </div>
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-left text-[11px] text-[var(--text-muted)] uppercase border-b border-[var(--border-subtle)]">
-                <th className="pb-2.5 font-medium">District</th>
-                <th className="pb-2.5 font-medium">Category</th>
-                <th className="pb-2.5 font-medium text-right">Extraction</th>
-                <th className="pb-2.5 font-medium text-right">Stage</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[var(--border-subtle)]">
-              {topBlocks.map((block, i) => (
-                <tr key={`${block.block}-${i}`} className="hover:bg-[var(--bg-elevated)]/30 transition-colors">
-                  <td className="py-3.5">
-                    <div className="flex items-center gap-2.5">
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-[11px] font-bold`} style={{
-                        background: i === 0 ? 'var(--accent-amber-glow)' : i === 1 ? 'var(--accent-sky-glow)' : i === 2 ? 'var(--accent-teal-glow)' : 'var(--bg-elevated)',
-                        color: i === 0 ? 'var(--accent-amber)' : i === 1 ? 'var(--accent-sky)' : i === 2 ? 'var(--accent-teal)' : 'var(--text-muted)',
-                        fontFamily: 'var(--font-mono)',
-                      }}>
-                        {i + 1}
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-[var(--text-primary)]">{block.district}</p>
-                        <p className="text-xs text-[var(--text-muted)]">{block.state}</p>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="py-3.5">
-                    <span className={`text-[11px] px-2 py-0.5 rounded-full font-medium`} style={{
-                      background: `${CATEGORY_COLORS[block.category]}15`,
-                      color: CATEGORY_COLORS[block.category],
-                      border: `1px solid ${CATEGORY_COLORS[block.category]}30`,
-                    }}>
-                      {block.category}
-                    </span>
-                  </td>
-                  <td className="py-3.5 text-right">
-                    <span className="text-sm text-[var(--text-secondary)]" style={{ fontFamily: 'var(--font-mono)' }}>{block.groundwater_extraction.toFixed(0)} MCM</span>
-                  </td>
-                  <td className="py-3.5 text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      <div className="w-16 h-1.5 bg-[var(--bg-elevated)] rounded-full overflow-hidden">
-                        <div
-                          className="h-full rounded-full"
-                          style={{
-                            width: `${Math.min(block.extraction_stage, 100)}%`,
-                            backgroundColor: block.extraction_stage > 90 ? 'var(--over-exploited)' : block.extraction_stage > 70 ? 'var(--semi-critical)' : 'var(--safe)',
-                            boxShadow: block.extraction_stage > 90 ? 'var(--over-exploited-glow)' : block.extraction_stage > 70 ? 'var(--semi-critical-glow)' : 'var(--safe-glow)',
-                          }}
-                        />
-                      </div>
-                      <span className="text-xs text-[var(--text-muted)] w-8 text-right" style={{ fontFamily: 'var(--font-mono)' }}>{block.extraction_stage.toFixed(0)}%</span>
-                    </div>
-                  </td>
+          <div className="overflow-x-auto -mx-4 md:mx-0 px-4 md:px-0">
+            <table className="w-full text-sm min-w-[480px]">
+              <thead>
+                <tr className="text-left text-[11px] text-[var(--text-muted)] uppercase border-b border-[var(--border-subtle)]">
+                  <th className="pb-2.5 font-medium">District</th>
+                  <th className="pb-2.5 font-medium">Category</th>
+                  <th className="pb-2.5 font-medium text-right">Extraction</th>
+                  <th className="pb-2.5 font-medium text-right">Stage</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-[var(--border-subtle)]">
+                {topBlocks.map((block, i) => (
+                  <tr key={`${block.block}-${i}`} className="hover:bg-[var(--bg-elevated)]/30 transition-colors">
+                    <td className="py-3.5">
+                      <div className="flex items-center gap-2.5">
+                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-[11px] font-bold`} style={{
+                          background: i === 0 ? 'var(--accent-amber-glow)' : i === 1 ? 'var(--accent-sky-glow)' : i === 2 ? 'var(--accent-teal-glow)' : 'var(--bg-elevated)',
+                          color: i === 0 ? 'var(--accent-amber)' : i === 1 ? 'var(--accent-sky)' : i === 2 ? 'var(--accent-teal)' : 'var(--text-muted)',
+                          fontFamily: 'var(--font-mono)',
+                        }}>
+                          {i + 1}
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-[var(--text-primary)]">{block.district}</p>
+                          <p className="text-xs text-[var(--text-muted)]">{block.state}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="py-3.5">
+                      <span className={`text-[11px] px-2 py-0.5 rounded-full font-medium`} style={{
+                        background: `${CATEGORY_COLORS[block.category]}15`,
+                        color: CATEGORY_COLORS[block.category],
+                        border: `1px solid ${CATEGORY_COLORS[block.category]}30`,
+                      }}>
+                        {block.category}
+                      </span>
+                    </td>
+                    <td className="py-3.5 text-right">
+                      <span className="text-sm text-[var(--text-secondary)]" style={{ fontFamily: 'var(--font-mono)' }}>{block.groundwater_extraction.toFixed(0)} MCM</span>
+                    </td>
+                    <td className="py-3.5 text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <div className="w-16 h-1.5 bg-[var(--bg-elevated)] rounded-full overflow-hidden">
+                          <div
+                            className="h-full rounded-full"
+                            style={{
+                              width: `${Math.min(block.extraction_stage, 100)}%`,
+                              backgroundColor: block.extraction_stage > 90 ? 'var(--over-exploited)' : block.extraction_stage > 70 ? 'var(--semi-critical)' : 'var(--safe)',
+                              boxShadow: block.extraction_stage > 90 ? 'var(--over-exploited-glow)' : block.extraction_stage > 70 ? 'var(--semi-critical-glow)' : 'var(--safe-glow)',
+                            }}
+                          />
+                        </div>
+                        <span className="text-xs text-[var(--text-muted)] w-8 text-right" style={{ fontFamily: 'var(--font-mono)' }}>{block.extraction_stage.toFixed(0)}%</span>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
 
         {/* State Overview */}
-        <div className="glass-card p-5 animate-fade-in-up delay-8">
+        <div className="glass-card p-4 md:p-5 animate-fade-in-up delay-8">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h3 className="text-base font-semibold text-[var(--text-primary)]">State Overview</h3>
-              <p className="text-sm text-[var(--text-muted)] mt-0.5">Extraction status by state</p>
+              <h3 className="text-sm md:text-base font-semibold text-[var(--text-primary)]">State Overview</h3>
+              <p className="text-xs md:text-sm text-[var(--text-muted)] mt-0.5">Extraction status by state</p>
             </div>
           </div>
-          <div className="space-y-4 max-h-[480px] overflow-y-auto pr-1">
+          <div className="space-y-4 max-h-[360px] md:max-h-[480px] overflow-y-auto pr-1">
             {states.map((s) => {
               const cat = s.avg_extraction_stage > 90 ? 'Over-Exploited' : s.avg_extraction_stage > 70 ? 'Semi-Critical' : 'Safe'
               const catColor = CATEGORY_COLORS[cat]
@@ -645,9 +706,61 @@ function SidebarItem({ icon, label, active, onClick, collapsed }: {
         active ? 'active' : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]'
       } ${collapsed ? 'justify-center' : ''}`}
       title={collapsed ? label : undefined}
+      aria-current={active ? 'page' : undefined}
     >
       {icon}
       {!collapsed && <span>{label}</span>}
+    </button>
+  )
+}
+
+// --- Mobile Search ---
+
+function MobileSearch({ query, onSearch, onClear }: { query: string; onSearch: (q: string) => void; onClear: () => void }) {
+  const [isOpen, setIsOpen] = useState(false)
+
+  if (isOpen) {
+    return (
+      <div className="sm:hidden flex items-center gap-2 bg-[var(--bg-elevated)]/50 border border-[var(--border-subtle)] rounded-lg px-3 py-2 animate-fade-in focus-within:border-[var(--accent-sky)]/30">
+        <svg className="w-4 h-4 text-[var(--text-muted)] flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+        </svg>
+        <input
+          type="text"
+          value={query}
+          onChange={(e) => onSearch(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && query.trim()) {
+              onSearch(query)
+              setIsOpen(false)
+            }
+            if (e.key === 'Escape') {
+              setIsOpen(false)
+              onClear()
+            }
+          }}
+          autoFocus
+          placeholder="Search..."
+          className="bg-transparent text-sm text-[var(--text-primary)] placeholder-[var(--text-muted)] outline-none w-36"
+        />
+        <button onClick={() => { setIsOpen(false); onClear() }} className="text-[var(--text-muted)]" aria-label="Close search">
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+    )
+  }
+
+  return (
+    <button
+      onClick={() => setIsOpen(true)}
+      className="sm:hidden w-9 h-9 rounded-lg flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)]/50 transition-all"
+      aria-label="Open search"
+    >
+      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+      </svg>
     </button>
   )
 }
@@ -658,9 +771,9 @@ function StatCard({ label, value, sub, icon, color, trend, trendLabel, delay }: 
   label: string; value: string; sub: string; icon: React.ReactNode; color: string; trend?: 'up' | 'down'; trendLabel?: string; delay?: number
 }) {
   return (
-    <div className={`glass-card p-5 group animate-fade-in-up`} style={{ animationDelay: delay ? `${delay * 0.05}s` : undefined }}>
+    <div className={`glass-card p-4 md:p-5 group animate-fade-in-up`} style={{ animationDelay: delay ? `${delay * 0.05}s` : undefined }}>
       <div className="flex items-start justify-between mb-3">
-        <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ background: `${color}15`, color }}>
+        <div className="w-10 h-10 rounded-lg flex items-center justify-center transition-transform group-hover:scale-110" style={{ background: `${color}15`, color }}>
           {icon}
         </div>
         {trendLabel && (
@@ -674,7 +787,7 @@ function StatCard({ label, value, sub, icon, color, trend, trendLabel, delay }: 
         )}
       </div>
       <p className="text-[11px] text-[var(--text-muted)] font-medium uppercase tracking-wider">{label}</p>
-      <p className="text-3xl font-semibold text-[var(--text-primary)] mt-1.5" style={{ fontFamily: 'var(--font-mono)' }}>{value}</p>
+      <p className="text-2xl md:text-3xl font-semibold text-[var(--text-primary)] mt-1.5" style={{ fontFamily: 'var(--font-mono)' }}>{value}</p>
       <p className="text-xs text-[var(--text-muted)] mt-1.5">{sub}</p>
     </div>
   )
@@ -683,7 +796,7 @@ function StatCard({ label, value, sub, icon, color, trend, trendLabel, delay }: 
 function LoadingScreen() {
   return (
     <div className="min-h-screen bg-[var(--bg-deep)] flex items-center justify-center topo-bg">
-      <div className="text-center animate-fade-in">
+      <div className="text-center animate-fade-in px-4">
         <div className="relative w-16 h-16 mx-auto mb-6">
           <div className="absolute inset-0 rounded-full border-2 border-[var(--accent-amber)]/20" />
           <div className="absolute inset-0 rounded-full border-2 border-[var(--accent-amber)] border-t-transparent animate-spin" />
@@ -697,7 +810,7 @@ function LoadingScreen() {
   )
 }
 
-function ErrorScreen({ message }: { message: string }) {
+function ErrorScreen({ message, onRetry }: { message: string; onRetry?: () => void }) {
   return (
     <div className="min-h-screen bg-[var(--bg-deep)] flex items-center justify-center px-4 topo-bg">
       <div className="glass-card p-8 max-w-md text-center animate-scale-in">
@@ -709,6 +822,14 @@ function ErrorScreen({ message }: { message: string }) {
         <h2 className="text-[var(--danger)] text-lg font-semibold mb-2">Connection Error</h2>
         <p className="text-[var(--text-secondary)] text-sm">{message}</p>
         <p className="text-[var(--text-muted)] text-xs mt-4">Ensure backend is running on port 8000</p>
+        {onRetry && (
+          <button
+            onClick={onRetry}
+            className="mt-4 px-4 py-2 rounded-lg text-sm font-medium bg-[var(--accent-amber)]/10 text-[var(--accent-amber)] border border-[var(--accent-amber)]/20 hover:bg-[var(--accent-amber)]/20 transition-all"
+          >
+            Retry Connection
+          </button>
+        )}
       </div>
     </div>
   )
