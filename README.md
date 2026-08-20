@@ -174,6 +174,66 @@ Data sourced from **OpenCity.in** CKAN Datastore API with full provenance tracki
 
 ---
 
+## Implementation Plan
+
+### Phase 1: Foundation
+- [x] Initialize FastAPI backend with SQLite + SQLAlchemy
+- [x] Define data models (`GroundWater`, `DataSource`, `WaterReading`, `Evidence`)
+- [x] Build core API endpoints (blocks, states, categories, health)
+- [x] Set up React + Vite + TypeScript + Tailwind frontend scaffold
+
+### Phase 2: Data Integration
+- [x] Ingest official CGWB/IN-GRES data from OpenCity.in CKAN API
+- [x] Import state-level data for 2020 and 2022 (37 states each)
+- [x] Import district/block-level data for 2024 and 2025 (235 + 241 records)
+- [x] Fix data quality issues: filter summary rows, correct TN/TG swap, normalize state names
+- [x] Add `DataSource` model for full provenance tracking
+- [x] Add coordinates to all 516 records for map display
+- [x] Build data validation and quality reporting scripts
+
+### Phase 3: Frontend — Dashboard & Map
+- [x] Build Nexus-style sidebar navigation (OVERVIEW + INTELLIGENCE sections)
+- [x] Create dashboard with category cards, trend chart, and top blocks table
+- [x] Implement Leaflet interactive map with India bounds restriction
+- [x] Add CartoDB dark basemap tiles and category-colored markers
+- [x] Build state summary grid with extraction stage indicators
+- [x] Add data source banner showing coverage years
+
+### Phase 4: AI Chat Assistant & Intelligence
+- [x] Build intent parser supporting English, Hindi, and Hinglish (9+ intents)
+- [x] Implement 33 known states/UTs + 6 years (2020–2025) recognition
+- [x] Build chat UI with Markdown rendering, evidence badges, risk scores
+- [x] Add Hindi/Hinglish translations in chat responses
+- [x] Implement intent handlers: status, compare, trend, risk, top blocks, category, help, search, export
+- [x] Add source citations to all chat responses
+- [x] Build AI-derived risk scoring (extraction stage + recharge deficit + multi-year trend)
+
+### Phase 5: Analytics & Trend Features
+- [x] Build multi-year trend endpoint with 4 data points (2020, 2022, 2024, 2025)
+- [x] Create Recharts area chart (extraction, recharge, stage)
+- [x] Add insight bar with extraction change % and stage direction
+- [x] Filter trend data to state-level only for accurate cross-year comparison
+- [x] Implement top extraction ranking (latest year default, no duplicates)
+- [x] Build compare handler for year-over-year state comparison
+
+### Phase 6: Design & Polish
+- [x] Design "Deep Earth" geological dark theme with CSS variables
+- [x] Add Instrument Serif (headings), DM Sans (body), JetBrains Mono (data) typography
+- [x] Implement glassmorphism cards, grain texture overlay, glow shadows
+- [x] Add staggered fadeInUp animations and pulse-glow effects
+- [x] Restrict map to India bounds with maxBounds and viscosity
+- [x] Update chat suggestions with Hindi queries and data source reference
+
+### Phase 7: Search, Export & Deployment
+- [x] Add search bar in dashboard header (navigates to AI Assistant)
+- [x] Build CSV export endpoint with filtering
+- [x] Add `/api/data/search` endpoint for full-text search
+- [x] Add static file serving to FastAPI for production deployment
+- [x] Write comprehensive README with clone instructions
+- [ ] Deploy with ngrok or similar tunneling for shareable access
+
+---
+
 ## Testing
 
 ```bash
