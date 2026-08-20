@@ -1,0 +1,9 @@
+
+.DS_Store
+__pycache__/
+data/jaldrishti.db
+*.pyc
+node_modules/
+frontend/node_modules/
+dist/
+frontend/dist/
