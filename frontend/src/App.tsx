@@ -1,7 +1,7 @@
 import { useEffect, useState, lazy, Suspense } from 'react'
 import {
-  PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend,
-  LineChart, Line, XAxis, YAxis, CartesianGrid, AreaChart, Area,
+  PieChart, Pie, Cell, ResponsiveContainer, Tooltip,
+  XAxis, YAxis, CartesianGrid, AreaChart, Area,
 } from 'recharts'
 
 const GroundwaterMap = lazy(() => import('./components/GroundwaterMap'))
@@ -104,12 +104,8 @@ export default function App() {
   const totalUnits = categories.reduce((s, c) => s + c.count, 0)
   const safeUnits = categories.find(c => c.category === 'Safe')?.count ?? 0
   const criticalUnits = categories.find(c => c.category === 'Critical')?.count ?? 0
-  const semiCriticalUnits = categories.find(c => c.category === 'Semi-Critical')?.count ?? 0
   const overExploitedUnits = categories.find(c => c.category === 'Over-Exploited')?.count ?? 0
   const avgStage = trend.length ? trend[trend.length - 1].avg_extraction_stage : 0
-  const latestExtraction = trend.length ? trend[trend.length - 1].total_extraction : 0
-  const prevExtraction = trend.length >= 2 ? trend[trend.length - 2].total_extraction : latestExtraction
-  const extractionDelta = latestExtraction - prevExtraction
 
   return (
     <div className="flex h-screen bg-[var(--bg-deep)] overflow-hidden topo-bg">
@@ -242,11 +238,8 @@ export default function App() {
               totalUnits={totalUnits}
               safeUnits={safeUnits}
               criticalUnits={criticalUnits}
-              semiCriticalUnits={semiCriticalUnits}
               overExploitedUnits={overExploitedUnits}
               avgStage={avgStage}
-              latestExtraction={latestExtraction}
-              extractionDelta={extractionDelta}
             />
           )}
           {page === 'assistant' && (
@@ -271,7 +264,7 @@ export default function App() {
 
 // --- Dashboard Page ---
 
-function DashboardPage({ categories, trend, topBlocks, states, totalUnits, safeUnits, criticalUnits, semiCriticalUnits, overExploitedUnits, avgStage, latestExtraction, extractionDelta }: {
+function DashboardPage({ categories, trend, topBlocks, states, totalUnits, safeUnits, criticalUnits, overExploitedUnits, avgStage }: {
   categories: CategoryDistribution[]
   trend: TrendPoint[]
   topBlocks: TopBlock[]
@@ -279,11 +272,8 @@ function DashboardPage({ categories, trend, topBlocks, states, totalUnits, safeU
   totalUnits: number
   safeUnits: number
   criticalUnits: number
-  semiCriticalUnits: number
   overExploitedUnits: number
   avgStage: number
-  latestExtraction: number
-  extractionDelta: number
 }) {
   return (
     <div className="p-6 space-y-6">
@@ -414,10 +404,11 @@ function DashboardPage({ categories, trend, topBlocks, states, totalUnits, safeU
                 />
                 <Tooltip
                   contentStyle={{ background: 'var(--bg-surface)', border: '1px solid var(--border-medium)', borderRadius: 8, fontSize: 11, boxShadow: 'var(--shadow-elevated)', color: 'var(--text-primary)' }}
-                  formatter={(value: number, name: string) => {
-                    if (name === 'total_extraction') return [`${value.toLocaleString()} MCM`, 'Extraction']
-                    if (name === 'total_recharge') return [`${value.toLocaleString()} MCM`, 'Recharge']
-                    return [`${value.toFixed(1)}%`, 'Stage']
+                  formatter={(value, name) => {
+                    const v = Number(value)
+                    if (name === 'total_extraction') return [`${v.toLocaleString()} MCM`, 'Extraction']
+                    if (name === 'total_recharge') return [`${v.toLocaleString()} MCM`, 'Recharge']
+                    return [`${v.toFixed(1)}%`, 'Stage']
                   }}
                   labelFormatter={(label) => `Assessment Year ${label}`}
                 />

@@ -1,10 +1,13 @@
-from fastapi import FastAPI, Depends, Query
+from fastapi import FastAPI, Depends, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
 from sqlalchemy import func, desc
 from datetime import datetime
 from pydantic import BaseModel
 from typing import List, Optional
+import os
 
 from database import init_db, get_db, WaterReading, GroundWater, DataSource
 from parser import parse_message, ChatIntent, KNOWN_STATES
@@ -2118,3 +2121,17 @@ def parse_only(req: ChatRequest):
         "language": parsed.language,
         "raw_message": parsed.raw_message,
     }
+
+
+# --- Serve built frontend ---
+STATIC_DIR = os.path.join(os.path.dirname(__file__), "..", "frontend", "dist")
+
+if os.path.isdir(STATIC_DIR):
+    app.mount("/assets", StaticFiles(directory=os.path.join(STATIC_DIR, "assets")), name="assets")
+
+    @app.get("/{full_path:path}")
+    async def serve_spa(request: Request, full_path: str):
+        file_path = os.path.join(STATIC_DIR, full_path)
+        if os.path.isfile(file_path):
+            return FileResponse(file_path)
+        return FileResponse(os.path.join(STATIC_DIR, "index.html"))
