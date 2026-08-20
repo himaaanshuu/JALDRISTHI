@@ -1,9 +1,16 @@
 
 .DS_Store
 __pycache__/
-data/jaldrishti.db
 *.pyc
+
+# Python virtual environment
+backend/.venv/
+
+# Node dependencies and build output
 node_modules/
 frontend/node_modules/
 dist/
 frontend/dist/
+
+# SQLite database
+*.db
