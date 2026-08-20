@@ -1,8 +1,11 @@
 from sqlalchemy import create_engine, Column, Integer, String, DateTime, Float, Text
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import DeclarativeBase, sessionmaker
 from datetime import datetime
 import os
+
+
+class Base(DeclarativeBase):
+    pass
 
 DATABASE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "data")
 os.makedirs(DATABASE_DIR, exist_ok=True)
@@ -11,9 +14,6 @@ DATABASE_URL = f"sqlite:///{os.path.join(DATABASE_DIR, 'jaldrishti.db')}"
 
 engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-Base = declarative_base()
-
-
 class DataSource(Base):
     __tablename__ = "data_sources"
 

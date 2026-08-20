@@ -1,3 +1,4 @@
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, Depends, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
@@ -12,7 +13,14 @@ import os
 from database import init_db, get_db, WaterReading, GroundWater, DataSource
 from parser import parse_message, ChatIntent, KNOWN_STATES
 
-app = FastAPI(title="JAL-DRISHTI AI", version="1.0.0")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    init_db()
+    seed_demo_data()
+    yield
+
+app = FastAPI(title="JAL-DRISHTI AI", version="1.0.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -26,12 +34,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-
-@app.on_event("startup")
-def startup():
-    init_db()
-    seed_demo_data()
 
 
 def seed_demo_data():
@@ -643,7 +645,6 @@ def get_trend(
         func.sum(GroundWater.annual_groundwater_recharge).label("total_recharge"),
         func.count(func.distinct(GroundWater.block)).label("blocks"),
     ).filter(
-        GroundWater.district == "",
         GroundWater.groundwater_extraction.isnot(None),
         GroundWater.annual_groundwater_recharge.isnot(None),
     )
