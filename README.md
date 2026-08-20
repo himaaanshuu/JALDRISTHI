@@ -192,7 +192,7 @@ Data sourced from **OpenCity.in** CKAN Datastore API with full provenance tracki
 - [x] Build data validation and quality reporting scripts
 
 ### Phase 3: Frontend — Dashboard & Map
-- [x] Build Nexus-style sidebar navigation (OVERVIEW + INTELLIGENCE sections)
+- [x] Build sidebar navigation (OVERVIEW + INTELLIGENCE sections)
 - [x] Create dashboard with category cards, trend chart, and top blocks table
 - [x] Implement Leaflet interactive map with India bounds restriction
 - [x] Add CartoDB dark basemap tiles and category-colored markers
