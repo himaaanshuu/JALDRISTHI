@@ -1,8 +1,8 @@
-# JAL-DRISHTI
+# जलदृष्टि DRISTI
 
-**AI-Powered Groundwater Intelligence Platform for India**
+**Groundwater Intelligence Platform for India**
 
-JAL-DRISHTI is a comprehensive groundwater assessment and monitoring platform covering all 36 states and union territories of India. It integrates official CGWB/IN-GRES data with an AI chat assistant, interactive map, trend analytics, and risk scoring — all in a single deployable application.
+जलदृष्टि DRISTI is a comprehensive groundwater assessment and monitoring platform covering all 36 states and union territories of India. It integrates official CGWB/IN-GRES data with an AI chat assistant, interactive map, trend analytics, and risk scoring — all in a single deployable application.
 
 ---
 
@@ -13,7 +13,7 @@ JAL-DRISHTI is a comprehensive groundwater assessment and monitoring platform co
 - **Trend Analytics** — Area chart showing extraction, recharge, and stage trends across 4 assessment years (2020, 2022, 2024, 2025)
 - **Risk Analysis** — AI-derived risk scores for each block based on extraction stage, recharge deficit, and multi-year trends
 - **Data Provenance** — Full source tracking with official data import, validation reports, and evidence citations
-- **Dark Geological Theme** — Custom "Deep Earth" design system with Instrument Serif, DM Sans, and JetBrains Mono typography
+- **Bilingual Design** — Hindi + English typography with Noto Sans Devanagari, Inter, and IBM Plex Mono
 - **State & District Coverage** — 522 official records across all 36 states/UTs, 4 assessment years, 8 categories
 
 ---
@@ -34,12 +34,22 @@ jaldrishti/
 ├── frontend/
 │   ├── src/
 │   │   ├── App.tsx              # Dashboard, Map, Chat pages
+│   │   ├── App.css              # Design system (CSS variables, typography scale)
 │   │   ├── components/
-│   │   │   ├── ChatAssistant.tsx # AI chat interface
-│   │   │   └── GroundwaterMap.tsx # Leaflet map component
-│   │   └── index.css            # Design system (CSS variables, animations)
-│   ├── index.html               # Google Fonts (Instrument Serif, DM Sans, JetBrains Mono)
-│   └── package.json             # React + Vite + TypeScript + Tailwind
+│   │   │   ├── Sidebar.tsx      # Bilingual navigation (English + Hindi)
+│   │   │   ├── Topbar.tsx       # Search, language toggle, status
+│   │   │   ├── IndiaMap.tsx     # SVG India map
+│   │   │   └── views/
+│   │   │       ├── Overview.tsx     # Dashboard with KPIs
+│   │   │       ├── AIAssistant.tsx  # Chat interface
+│   │   │       ├── MapView.tsx      # Full-screen map
+│   │   │       ├── Analytics.tsx    # Trends and rankings
+│   │   │       ├── Compare.tsx      # Year-over-year comparison
+│   │   │       ├── Reports.tsx      # Report generation
+│   │   │       └── DataSources.tsx  # Data provenance
+│   │   ├── data/states.ts       # State data and types
+│   │   └── lib/api.ts           # API client
+│   └── index.html               # Google Fonts (Noto Sans Devanagari, Inter, IBM Plex Mono)
 └── data/                        # SQLite database (gitignored)
 ```
 
@@ -49,11 +59,13 @@ jaldrishti/
 
 | Layer | Technology |
 |-------|-----------|
-| Frontend | React 19, TypeScript, Vite, Tailwind CSS, Recharts, Leaflet |
+| Frontend | React 19, TypeScript, Vite |
 | Backend | FastAPI, SQLAlchemy, Pydantic |
 | Database | SQLite |
 | Data Source | CGWB/IN-GRES via OpenCity.in CKAN API |
-| Fonts | Instrument Serif, DM Sans, JetBrains Mono |
+| Hindi Font | Noto Sans Devanagari (300–700) |
+| English Font | Inter (300–800) |
+| Data Font | IBM Plex Mono (400–600) |
 
 ---
 
@@ -170,7 +182,7 @@ python3 -m uvicorn main:app --host 0.0.0.0 --port 8000
 
 Data sourced from **OpenCity.in** CKAN Datastore API with full provenance tracking.
 
-> **Note:** JAL-DRISHTI is a prototype. Official groundwater data should be verified against primary CGWB/IN-GRES sources for policy or operational decisions.
+> **Note:** जलदृष्टि DRISTI is a prototype. Official groundwater data should be verified against primary CGWB/IN-GRES sources for policy or operational decisions.
 
 ---
 
@@ -180,7 +192,7 @@ Data sourced from **OpenCity.in** CKAN Datastore API with full provenance tracki
 - [x] Initialize FastAPI backend with SQLite + SQLAlchemy
 - [x] Define data models (`GroundWater`, `DataSource`, `WaterReading`, `Evidence`)
 - [x] Build core API endpoints (blocks, states, categories, health)
-- [x] Set up React + Vite + TypeScript + Tailwind frontend scaffold
+- [x] Set up React + Vite + TypeScript frontend scaffold
 
 ### Phase 2: Data Integration
 - [x] Ingest official CGWB/IN-GRES data from OpenCity.in CKAN API
@@ -192,7 +204,7 @@ Data sourced from **OpenCity.in** CKAN Datastore API with full provenance tracki
 - [x] Build data validation and quality reporting scripts
 
 ### Phase 3: Frontend — Dashboard & Map
-- [x] Build sidebar navigation (OVERVIEW + INTELLIGENCE sections)
+- [x] Build sidebar navigation with bilingual labels (English + Hindi)
 - [x] Create dashboard with category cards, trend chart, and top blocks table
 - [x] Implement Leaflet interactive map with India bounds restriction
 - [x] Add CartoDB dark basemap tiles and category-colored markers
@@ -216,13 +228,15 @@ Data sourced from **OpenCity.in** CKAN Datastore API with full provenance tracki
 - [x] Implement top extraction ranking (latest year default, no duplicates)
 - [x] Build compare handler for year-over-year state comparison
 
-### Phase 6: Design & Polish
-- [x] Design "Deep Earth" geological dark theme with CSS variables
-- [x] Add Instrument Serif (headings), DM Sans (body), JetBrains Mono (data) typography
-- [x] Implement glassmorphism cards, grain texture overlay, glow shadows
-- [x] Add staggered fadeInUp animations and pulse-glow effects
-- [x] Restrict map to India bounds with maxBounds and viscosity
-- [x] Update chat suggestions with Hindi queries and data source reference
+### Phase 6: Typography & Visual Identity
+- [x] Brand redesign: जलदृष्टि (Hindi) + DRISTI (English) + GROUNDWATER INTELLIGENCE
+- [x] Import Noto Sans Devanagari (Hindi), Inter (English), IBM Plex Mono (data)
+- [x] Build bilingual sidebar navigation with Hindi secondary labels
+- [x] Add bilingual eyebrow prefixes to all view headers
+- [x] Create CSS typography scale (--text-xs through --text-3xl)
+- [x] Create CSS spacing scale (--sp-1 through --sp-10)
+- [x] Apply consistent font-family across all components
+- [x] Update page title to जलदृष्टि DRISTI — Groundwater Intelligence
 
 ### Phase 7: Search, Export & Deployment
 - [x] Add search bar in dashboard header (navigates to AI Assistant)
