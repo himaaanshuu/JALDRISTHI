@@ -14,3 +14,8 @@ frontend/dist/
 
 # SQLite database
 *.db
+backend/venv/
+*.tsbuildinfo
+frontend/vite.config.js
+frontend/vite.config.d.ts
+package-lock.json
