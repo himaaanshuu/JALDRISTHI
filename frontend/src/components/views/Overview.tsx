@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import IndiaMap from "../IndiaMap";
+import IndiaLeafletMap from "../IndiaLeafletMap";
 import { fetchJson } from "../../lib/api";
 import { statusColor, statusLabel, type StateData } from "../../data/states";
 
@@ -204,7 +204,9 @@ export default function Overview() {
           </div>
           <div className="map-stage">
             <div className="map-scanline" />
-            <IndiaMap onSelect={setSelected} selected={selected?.name ?? null} />
+            <div className="map-leaflet-wrap">
+              <IndiaLeafletMap onSelect={setSelected} selected={selected?.name ?? null} />
+            </div>
           </div>
         </div>
 

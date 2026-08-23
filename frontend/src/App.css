@@ -1,7 +1,7 @@
 /* ============================= DESIGN TOKENS ============================= */
 :root {
-  --deep-water: #0b2631;
-  --dark-ocean: #123e4a;
+  --deep-water: #0f172a;
+  --dark-ocean: #0f172a;
   --water-blue: #1f7fbd;
   --muted-aqua: #76bdf2;
   --light-water: #e8f5ff;
@@ -19,7 +19,7 @@
 
   --panel: #ffffff;
   --panel-line: #dce3e1;
-  --sidebar: #0e2a34;
+  --sidebar: #0f172a;
   --sidebar-line: rgba(255, 255, 255, 0.08);
 
   --radius-sm: 2px;
@@ -28,7 +28,7 @@
   --font-hi: "Noto Sans Devanagari", sans-serif;
   --font-mono: "IBM Plex Mono", monospace;
 
-  --shadow-panel: 0 1px 2px rgba(11, 38, 49, 0.06), 0 8px 24px -12px rgba(11, 38, 49, 0.12);
+  --shadow-panel: 0 1px 2px rgba(15, 23, 42, 0.06), 0 8px 24px -12px rgba(15, 23, 42, 0.12);
 
   /* Spacing scale */
   --sp-1: 4px;
@@ -37,7 +37,9 @@
   --sp-4: 16px;
   --sp-5: 20px;
   --sp-6: 24px;
+  --sp-7: 28px;
   --sp-8: 32px;
+  --sp-9: 36px;
   --sp-10: 40px;
 
   /* Typography scale */
@@ -811,11 +813,13 @@
   overflow: hidden;
 }
 
-.map-stage svg {
-  width: 100%;
-  max-width: 460px;
-  height: auto;
-  filter: drop-shadow(0 10px 20px rgba(11, 38, 49, 0.08));
+.map-leaflet-wrap {
+  position: relative;
+  flex: 1;
+  align-self: stretch;
+  border-radius: 3px;
+  overflow: hidden;
+  min-height: 320px;
 }
 
 .india-poly {
@@ -1270,6 +1274,7 @@
   outline: 0;
   font-family: var(--font-ui);
   font-size: var(--text-base);
+  color: var(--text);
 }
 
 .assist-input input::placeholder {
@@ -1339,9 +1344,16 @@
   overflow: hidden;
 }
 
-.map-full svg {
+.map-full > svg {
   width: 100%;
   height: 100%;
+}
+
+.leaflet-container {
+  position: relative;
+  z-index: 0;
+  background: var(--deep-water);
+  font-family: var(--font-ui);
 }
 
 .map-full .india-poly {
@@ -1361,17 +1373,17 @@
   display: flex;
   flex-direction: column;
   gap: var(--sp-3);
-  z-index: 5;
+  z-index: 800;
 }
 
 .float-panel {
-  background: rgba(11, 38, 49, 0.82);
+  background: rgba(15, 23, 42, 0.82);
   backdrop-filter: blur(6px);
   border: 1px solid rgba(183, 205, 209, 0.15);
   border-radius: 3px;
-  padding: var(--sp-3);
+  padding: var(--sp-2);
   color: #eaf3f4;
-  min-width: 210px;
+  min-width: 168px;
 }
 
 .float-panel .fp-title {
@@ -1381,7 +1393,7 @@
   letter-spacing: 0.08em;
   color: #7c97a0;
   font-weight: 600;
-  margin-bottom: var(--sp-2);
+  margin-bottom: var(--sp-1);
 }
 
 .float-select {
@@ -1390,17 +1402,22 @@
   border: 1px solid rgba(183, 205, 209, 0.2);
   color: #eaf3f4;
   font-family: var(--font-ui);
-  font-size: var(--text-sm);
-  padding: var(--sp-2);
+  font-size: var(--text-xs);
+  padding: 5px var(--sp-2);
   border-radius: 2px;
   margin-bottom: var(--sp-1);
+}
+
+.float-select option {
+  color: var(--text);
+  background: #fff;
 }
 
 .map-legend-float {
   position: absolute;
   bottom: var(--sp-5);
   left: var(--sp-5);
-  z-index: 5;
+  z-index: 800;
 }
 
 .map-side-panel {
@@ -1413,7 +1430,7 @@
   transform: translateX(100%);
   transition: transform 0.3s ease;
   box-shadow: -8px 0 24px rgba(0, 0, 0, 0.15);
-  z-index: 6;
+  z-index: 900;
   padding: var(--sp-5);
   overflow-y: auto;
 }
@@ -1536,6 +1553,7 @@
   font-family: var(--font-ui);
   font-size: var(--text-sm);
   background: var(--bg);
+  color: var(--text);
 }
 
 .cmp-table {

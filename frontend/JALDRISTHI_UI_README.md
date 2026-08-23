@@ -1,8 +1,8 @@
 # JALDRISTHI — Frontend UI/UX drop-in
 
-Pure front end, no backend/API/data logic touched. No new npm packages needed —
-everything uses plain SVG + React, matching what's already in your `frontend/`
-(react, react-dom, typescript, vite).
+Pure front end, no backend/API/data logic touched. Uses React + Vite with two
+added packages: `leaflet` / `react-leaflet` for the real map tiles
+(OpenStreetMap/CARTO — free, no API key).
 
 ## Where these go in your existing project
 
@@ -15,9 +15,10 @@ frontend/
     App.css                      → replace (design tokens + all component styles)
     index.css                    → replace (font import + base reset)
     data/
-      states.ts                  → add
+      states.ts                  → add (includes real lat/lng per state + simplified India outline)
     components/
-      IndiaMap.tsx                → add
+      IndiaLeafletMap.tsx         → add (shared Leaflet map, bounded to India)
+      IndiaMap.tsx                → legacy SVG map (kept, no longer used by views)
       Sidebar.tsx                 → add
       Topbar.tsx                  → add
       views/
@@ -48,11 +49,23 @@ values. To connect to your backend:
 3. The AI Assistant view (`AIAssistant.tsx`) has one hardcoded example
    exchange — replace it with your actual assistant/chat state and API calls.
 
+## Map
+
+Both the Overview page and Groundwater Map use `IndiaLeafletMap` — a Leaflet
+map (dark CARTO/OSM tiles) locked to India's bounds via `maxBounds`. State
+markers are plotted at real coordinates from `states.ts`. Clicking a selected
+marker again clears the selection.
+
+The Groundwater Map filters (year / state / category) compose together in one
+pipeline in `MapView.tsx`; year scales the extraction-stage figure, state and
+category narrow the visible markers.
+
 ## Notes
 
-- No `lucide-react` or icon library required — icons are inline SVG,
-  matching the original mockup exactly.
+- Icons are inline SVG — no icon library required.
 - Sidebar collapses into a drawer under 1024px width; `Topbar`'s menu button
   toggles it (already wired in `App.tsx`).
 - Colors, type, and spacing all come from CSS custom properties in
-  `App.css` `:root` — change values there to retheme globally.
+  `App.css` `:root` — change values there to retheme globally. The dark
+  surface used across the app (sidebar, hero search, map background) is
+  `--deep-water` / `--dark-ocean`, currently `#0f172a`.

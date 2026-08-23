@@ -1,19 +1,18 @@
 import { indiaPath, states, statusColor, type StateData } from "../data/states";
 
-const northEastPath = "M280 82 L300 74 L319 82 L324 100 L316 120 L296 116 L284 104 Z";
-
 interface IndiaMapProps {
   dark?: boolean;
   onSelect: (state: StateData) => void;
   selected?: string | null;
+  visible?: StateData[];
 }
 
-export default function IndiaMap({ dark = false, onSelect, selected }: IndiaMapProps) {
+export default function IndiaMap({ dark = false, onSelect, selected, visible }: IndiaMapProps) {
+  const shown = visible ?? states;
   return (
     <svg viewBox="0 0 400 480" role="img" aria-label="Groundwater categorisation map of India">
       <path className="india-poly" d={indiaPath} />
-      <path className="india-ne" d={northEastPath} />
-      {states.map((s) => {
+      {shown.map((s) => {
         const c = statusColor[s.status];
         return (
           <g key={s.name}>
@@ -24,7 +23,7 @@ export default function IndiaMap({ dark = false, onSelect, selected }: IndiaMapP
               cy={s.cy}
               r={selected === s.name ? 7 : 5.5}
               fill={c}
-              stroke={dark ? "#0B2631" : "#fff"}
+              stroke={dark ? "#0F172A" : "#fff"}
               strokeWidth={1.5}
               onClick={() => onSelect(s)}
               tabIndex={0}

@@ -1,30 +1,91 @@
-import { useState } from "react";
-import IndiaMap from "../IndiaMap";
-import { statusColor, statusLabel, type StateData } from "../../data/states";
+import { useMemo, useState } from "react";
+import IndiaLeafletMap from "../IndiaLeafletMap";
+import { states, statusColor, statusLabel, type StateData } from "../../data/states";
+
+const yearFactor: Record<string, number> = {
+  "2024": 1,
+  "2022": 0.93,
+  "2020": 0.86,
+};
+
+function scaledExt(ext: string, factor: number) {
+  const n = parseInt(ext, 10);
+  return Number.isNaN(n) ? ext : `${Math.round(n * factor)}%`;
+}
 
 export default function MapView() {
   const [selected, setSelected] = useState<StateData | null>(null);
+  const [year, setYear] = useState("2024");
+  const [region, setRegion] = useState("all");
+  const [category, setCategory] = useState("all");
+
+  // All three filters compose together in one pipeline
+  const visible = useMemo(
+    () =>
+      states.filter(
+        (s) =>
+          (category === "all" || s.status === category) &&
+          (region === "all" || s.name === region)
+      ),
+    [category, region]
+  );
+
+  function handleRegion(value: string) {
+    setRegion(value);
+    setSelected(value === "all" ? null : (states.find((s) => s.name === value) ?? null));
+  }
+
+  function handleSelect(s: StateData) {
+    // clicking the selected point again clears the selection
+    if (selected?.name === s.name) {
+      setSelected(null);
+      setRegion("all");
+    } else {
+      setSelected(s);
+      setRegion(s.name);
+    }
+  }
+
+  const factor = yearFactor[year] ?? 1;
 
   return (
     <section className="view active">
       <div className="map-full">
-        <IndiaMap dark onSelect={setSelected} selected={selected?.name ?? null} />
+        <IndiaLeafletMap
+          onSelect={handleSelect}
+          selected={selected?.name ?? null}
+          visible={visible}
+        />
 
         <div className="map-floating">
           <div className="float-panel">
             <div className="fp-title">Filters</div>
-            <select className="float-select" defaultValue="2024">
+            <select
+              className="float-select"
+              value={year}
+              onChange={(e) => setYear(e.target.value)}
+            >
               <option value="2024">Assessment Year — 2024</option>
               <option value="2022">2022</option>
               <option value="2020">2020</option>
             </select>
-            <select className="float-select" defaultValue="all">
+            <select
+              className="float-select"
+              value={region}
+              onChange={(e) => handleRegion(e.target.value)}
+            >
               <option value="all">All States</option>
-              <option value="haryana">Haryana</option>
-              <option value="punjab">Punjab</option>
-              <option value="tn">Tamil Nadu</option>
+              {states.map((s) => (
+                <option key={s.name} value={s.name}>
+                  {s.name}
+                </option>
+              ))}
             </select>
-            <select className="float-select" defaultValue="all">
+            <select
+              className="float-select"
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+            >
               <option value="all">All Categories</option>
               <option value="safe">Safe</option>
               <option value="semi">Semi-Critical</option>
@@ -62,7 +123,7 @@ export default function MapView() {
             <>
               <div className="detail-head">
                 <div className="detail-loc">{selected.name}</div>
-                <div className="detail-year">2024 Dynamic Assessment</div>
+                <div className="detail-year">{year} Dynamic Assessment</div>
                 <span
                   className="status-pill"
                   style={{
@@ -77,7 +138,7 @@ export default function MapView() {
               <div className="metric-list" style={{ marginTop: 14 }}>
                 <div className="metric-row">
                   <span className="metric-name">Extraction Stage</span>
-                  <span className="metric-num">{selected.ext}</span>
+                  <span className="metric-num">{scaledExt(selected.ext, factor)}</span>
                 </div>
                 <div className="metric-row">
                   <span className="metric-name">Recharge</span>
