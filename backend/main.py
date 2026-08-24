@@ -9,6 +9,9 @@ from datetime import datetime
 from pydantic import BaseModel
 from typing import List, Optional
 import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 from database import init_db, get_db, WaterReading, GroundWater, DataSource
 from parser import parse_message, ChatIntent, KNOWN_STATES
@@ -22,13 +25,13 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="JAL-DRISHTI AI", version="1.0.0", lifespan=lifespan)
 
+# CORS configuration from environment
+cors_origins_str = os.getenv("CORS_ORIGINS", "http://localhost:5173,http://localhost:8000")
+cors_origins = [origin.strip() for origin in cors_origins_str.split(",")]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "http://localhost:3000",
-        "https://until-kinship-tapered.ngrok-free.dev",
-    ],
+    allow_origins=cors_origins,
     allow_origin_regex=r"https://.*\.ngrok-free\.dev$",
     allow_credentials=True,
     allow_methods=["*"],
