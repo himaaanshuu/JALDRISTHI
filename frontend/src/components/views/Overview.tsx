@@ -3,13 +3,6 @@ import IndiaLeafletMap from "../IndiaLeafletMap";
 import { fetchJson } from "../../lib/api";
 import { statusColor, statusLabel, type StateData } from "../../data/states";
 
-const suggestions = [
-  "Which districts are over-exploited?",
-  "Compare Haryana between 2020 and 2024",
-  "What changed in Uttar Pradesh?",
-  "Show groundwater stress near Delhi",
-];
-
 interface StateSummary {
   state: string;
   districts: number;
@@ -26,39 +19,23 @@ interface CoverageSummary {
   states_covered: number;
   districts_covered: number;
   blocks_covered: number;
+  total_recharge: number;
+  total_extraction: number;
+  avg_extraction_stage: number;
 }
 
 interface KpiCardData {
   label: string;
   value: string;
+  unit: string;
   description: string;
-  source: string;
   tone?: "default" | "water" | "demand" | "warning";
 }
 
-function splitValue(rawValue: string) {
-  const trimmed = rawValue.trim();
-  const match = trimmed.match(/^([\d.,]+)(.*)$/);
-
-  if (!match) {
-    return { amount: trimmed, unit: "" };
-  }
-
-  return {
-    amount: match[1].trim(),
-    unit: match[2].trim(),
-  };
-}
-
-function MetricValue({ value }: { value: string }) {
-  const { amount, unit } = splitValue(value);
-
-  return (
-    <span className="metric-value">
-      <span className="metric-amount">{amount}</span>
-      {unit ? <span className="metric-unit-inline">{unit}</span> : null}
-    </span>
-  );
+function formatNumber(n: number): string {
+  if (n >= 1_000_000) return (n / 1_000_000).toFixed(2);
+  if (n >= 1_000) return (n / 1_000).toFixed(1);
+  return n.toFixed(1);
 }
 
 export default function Overview() {
@@ -91,35 +68,38 @@ export default function Overview() {
 
   const assessmentUnits = coverage?.blocks_covered ?? 0;
   const overExploitedUnits = statesSummary.filter((item) => item.avg_extraction_stage >= 100).length;
+  const totalRecharge = coverage?.total_recharge ?? 0;
+  const totalExtraction = coverage?.total_extraction ?? 0;
+  const avgStage = coverage?.avg_extraction_stage ?? 0;
 
   const kpiCards: KpiCardData[] = [
     {
       label: "Assessment Units",
-      value: coverage ? String(assessmentUnits) : "—",
-      description: "Live from /api/data/coverage",
-      source: "",
+      value: assessmentUnits ? String(assessmentUnits) : "—",
+      unit: "blocks",
+      description: `${coverage?.states_covered ?? 0} states · ${coverage?.districts_covered ?? 0} districts`,
       tone: "default",
     },
     {
       label: "Groundwater Recharge",
-      value: coverage ? String(coverage.official_records) : "—",
-      description: "Official records",
-      source: "Live from /api/states",
+      value: totalRecharge ? formatNumber(totalRecharge) : "—",
+      unit: "MCM",
+      description: "Annual groundwater recharge",
       tone: "water",
     },
     {
-      label: "Extraction",
-      value: coverage ? String(coverage.total_records) : "—",
-      description: "Total records",
-      source: "Live from /api/data/coverage",
+      label: "Groundwater Extraction",
+      value: totalExtraction ? formatNumber(totalExtraction) : "—",
+      unit: "MCM",
+      description: "Total extraction volume",
       tone: "demand",
     },
     {
-      label: "Over-Exploited Units",
-      value: coverage ? String(overExploitedUnits) : "—",
-      description: "Derived from live-state summaries",
-      source: "",
-      tone: "warning",
+      label: "Avg Extraction Stage",
+      value: avgStage ? avgStage.toFixed(1) : "—",
+      unit: "%",
+      description: `${overExploitedUnits} over-exploited units`,
+      tone: avgStage > 90 ? "warning" : "default",
     },
   ];
 
@@ -127,49 +107,24 @@ export default function Overview() {
     <section className="view active">
       <div className="ov-hero">
         <div className="eyebrow">
-          CGWB · IN-GRES · National Assessment {coverage?.assessment_years.at(-1) ?? 2024}
+          CGWB · IN-GRES · National Assessment {coverage?.assessment_years.at(-1) ?? 2025}
         </div>
         <h1 className="hero-title">India Groundwater Intelligence</h1>
         <p className="hero-sub">
           Explore groundwater through AI, spatial intelligence and historical analysis
           across {assessmentUnits || 0} assessment units.
         </p>
-
-        <div className="ai-search">
-          <div className="ai-search-inner">
-            <div className="ai-search-row">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6}>
-                <path d="M12 2 3 7l9 5 9-5-9-5Z" />
-                <path d="M3 12l9 5 9-5M3 17l9 5 9-5" />
-              </svg>
-              <input type="text" placeholder="Ask about India's groundwater…" />
-              <button className="ai-search-go">
-                Ask
-                <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth={2}>
-                  <path d="M5 12h14M13 6l6 6-6 6" />
-                </svg>
-              </button>
-            </div>
-            <div className="suggest-row">
-              {suggestions.map((s) => (
-                <span className="chip" key={s}>
-                  {s}
-                </span>
-              ))}
-            </div>
-          </div>
-        </div>
       </div>
 
       <div className="kpi-strip">
         {kpiCards.map((card) => (
           <article className={`kpi kpi-${card.tone ?? "default"}`} key={card.label}>
             <div className="kpi-label">{card.label}</div>
-            <div className="kpi-value" style={card.tone === "warning" ? { color: "var(--over-exploited)" } : undefined}>
-              <MetricValue value={card.value} />
+            <div className="kpi-value">
+              <span className="metric-amount">{card.value}</span>
+              {card.unit && <span className="metric-unit-inline">{card.unit}</span>}
             </div>
             <div className="kpi-description">{card.description}</div>
-            {card.source ? <div className="kpi-source">{card.source}</div> : <div className="kpi-source kpi-source-empty" />}
           </article>
         ))}
       </div>
@@ -180,7 +135,7 @@ export default function Overview() {
             <div className="map-panel-title">
               Groundwater Categorisation
               <span>
-                {coverage?.assessment_years.at(-1) ?? 2024} Dynamic Assessment · All States
+                {coverage?.assessment_years.at(-1) ?? 2025} Dynamic Assessment · All States
               </span>
             </div>
             <div className="legend">
@@ -222,7 +177,7 @@ export default function Overview() {
             <>
               <div className="detail-head">
                 <div className="detail-loc">{selected.name}</div>
-                <div className="detail-year">2024 Dynamic Assessment</div>
+                <div className="detail-year">2025 Dynamic Assessment</div>
                 <span
                   className="status-pill"
                   style={{
@@ -238,25 +193,25 @@ export default function Overview() {
                 <div className="metric-row">
                   <span className="metric-name metric-name-critical">Extraction Stage</span>
                   <span className="metric-num metric-num-critical">
-                    <MetricValue value={selected.ext} />
+                    {selected.ext}
                   </span>
                 </div>
                 <div className="metric-row">
                   <span className="metric-name">Recharge</span>
                   <span className="metric-num">
-                    <MetricValue value={selected.rech} />
+                    {selected.rech}
                   </span>
                 </div>
                 <div className="metric-row">
                   <span className="metric-name">Extractable Resource</span>
                   <span className="metric-num">
-                    <MetricValue value={selected.extractable} />
+                    {selected.extractable}
                   </span>
                 </div>
                 <div className="metric-row">
                   <span className="metric-name">Groundwater Extraction</span>
                   <span className="metric-num">
-                    <MetricValue value={selected.exWater} />
+                    {selected.exWater}
                   </span>
                 </div>
                 <div className="metric-row">
@@ -279,7 +234,7 @@ export default function Overview() {
               </div>
               <div className="detail-source">
                 <span>Data Source</span>
-                <b>{coverage ? `${coverage.official_records} original records` : "CGWB / IN-GRES"}</b>
+                <b>CGWB / IN-GRES</b>
               </div>
             </>
           )}

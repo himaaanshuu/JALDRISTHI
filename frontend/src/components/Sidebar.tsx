@@ -46,6 +46,18 @@ const navEntries: NavEntry[] = [
     ),
   },
   {
+    key: "learning",
+    label: "Groundwater Learning",
+    hindi: "जलज्ञान",
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6}>
+        <path d="M12 2L2 7l10 5 10-5-10-5Z" />
+        <path d="M2 17l10 5 10-5" />
+        <path d="M2 12l10 5 10-5" />
+      </svg>
+    ),
+  },
+  {
     key: "analytics",
     label: "Analytics",
     hindi: "विश्लेषण",
@@ -100,7 +112,7 @@ interface SidebarProps {
 export default function Sidebar({ active, onNavigate, open }: SidebarProps) {
   return (
     <aside className={`sidebar${open ? " open" : ""}`} id="sidebar">
-      <div className="brand">
+      <div className="brand" style={{ cursor: "pointer" }} onClick={() => onNavigate("overview")}>
         <div className="brand-mark">
           <span className="brand-glyph">
             <svg viewBox="0 0 26 26" fill="none">

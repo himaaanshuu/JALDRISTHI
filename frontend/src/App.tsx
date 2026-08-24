@@ -8,6 +8,7 @@ import Analytics from "./components/views/Analytics";
 import Compare from "./components/views/Compare";
 import Reports from "./components/views/Reports";
 import DataSources from "./components/views/DataSources";
+import Learning from "./components/views/Learning";
 import type { ViewKey } from "./data/states";
 import "./App.css";
 
@@ -23,7 +24,7 @@ export default function App() {
   return (
     <div className="app">
       <Sidebar active={view} onNavigate={handleNavigate} open={sidebarOpen} />
-      <Topbar onMenuClick={() => setSidebarOpen((o) => !o)} />
+      <Topbar onMenuClick={() => setSidebarOpen((o) => !o)} onNavigate={handleNavigate} />
 
       <main className="content" id="content">
         {view === "overview" && <Overview />}
@@ -33,6 +34,7 @@ export default function App() {
         {view === "compare" && <Compare />}
         {view === "reports" && <Reports />}
         {view === "sources" && <DataSources />}
+        {view === "learning" && <Learning />}
       </main>
     </div>
   );

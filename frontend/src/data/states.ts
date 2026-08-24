@@ -58,4 +58,5 @@ export type ViewKey =
   | "analytics"
   | "compare"
   | "reports"
-  | "sources";
+  | "sources"
+  | "learning";

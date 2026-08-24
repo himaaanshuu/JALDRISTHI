@@ -257,6 +257,9 @@ class DataCoverageResponse(BaseModel):
     states_covered: int
     districts_covered: int
     blocks_covered: int
+    total_recharge: float
+    total_extraction: float
+    avg_extraction_stage: float
     sources: List[DataSourceInfo]
 
 
@@ -276,6 +279,11 @@ def get_data_coverage(db: Session = Depends(get_db)):
     blocks = db.query(func.count(func.distinct(GroundWater.block))).filter(
         GroundWater.block != ""
     ).scalar() or 0
+
+    # Aggregate groundwater metrics
+    total_recharge = db.query(func.sum(GroundWater.annual_groundwater_recharge)).scalar() or 0.0
+    total_extraction = db.query(func.sum(GroundWater.groundwater_extraction)).scalar() or 0.0
+    avg_stage = db.query(func.avg(GroundWater.extraction_stage)).scalar() or 0.0
 
     # Get source info with record counts
     sources = []
@@ -301,6 +309,9 @@ def get_data_coverage(db: Session = Depends(get_db)):
         states_covered=states,
         districts_covered=districts,
         blocks_covered=blocks,
+        total_recharge=round(total_recharge, 2),
+        total_extraction=round(total_extraction, 2),
+        avg_extraction_stage=round(avg_stage, 1),
         sources=sources,
     )
 

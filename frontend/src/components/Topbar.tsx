@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 import { fetchJson } from "../lib/api";
+import type { ViewKey } from "../data/states";
 
 interface TopbarProps {
   onMenuClick?: () => void;
+  onNavigate?: (view: ViewKey) => void;
 }
 
 interface HealthResponse {
@@ -12,9 +14,10 @@ interface HealthResponse {
   timestamp: string;
 }
 
-export default function Topbar({ onMenuClick }: TopbarProps) {
+export default function Topbar({ onMenuClick, onNavigate }: TopbarProps) {
   const [lang, setLang] = useState<"en" | "hi">("en");
   const [health, setHealth] = useState<HealthResponse | null>(null);
+  const [query, setQuery] = useState("");
 
   useEffect(() => {
     let active = true;
@@ -36,6 +39,12 @@ export default function Topbar({ onMenuClick }: TopbarProps) {
     };
   }, []);
 
+  const handleAsk = () => {
+    if (query.trim()) {
+      onNavigate?.("assistant");
+    }
+  };
+
   return (
     <header className="topbar">
       <button
@@ -48,17 +57,26 @@ export default function Topbar({ onMenuClick }: TopbarProps) {
         </svg>
       </button>
 
-      <div className="search-wrap">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-          <circle cx="11" cy="11" r="7" />
-          <path d="m21 21-4.3-4.3" />
+      <div className="topbar-ask">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} width="16" height="16">
+          <path d="M12 2 3 7l9 5 9-5-9-5Z" />
+          <path d="M3 12l9 5 9-5M3 17l9 5 9-5" />
         </svg>
-        <input type="text" placeholder="Search district, block, or dataset…" />
+        <input
+          type="text"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && handleAsk()}
+          placeholder="Ask about groundwater…"
+        />
+        <button className="topbar-ask-btn" onClick={handleAsk}>
+          Ask
+        </button>
       </div>
 
       <div className="topbar-field">
         <span className="fk">Year</span>
-        <span className="fv">2024</span>
+        <span className="fv">2026</span>
       </div>
       <div className="topbar-field">
         <span className="fk">Location</span>
@@ -66,6 +84,18 @@ export default function Topbar({ onMenuClick }: TopbarProps) {
       </div>
 
       <div className="topbar-spacer" />
+
+      <button
+        className="topbar-ai-btn"
+        onClick={() => onNavigate?.("assistant")}
+        title="Open AI Assistant"
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} width="16" height="16">
+          <path d="M4 5h16v11H8l-4 4V5Z" />
+          <path d="M8 9h8M8 12.5h5" />
+        </svg>
+        <span>AI Assistant</span>
+      </button>
 
       <div className="lang-toggle">
         <button className={lang === "en" ? "active" : ""} onClick={() => setLang("en")}>
