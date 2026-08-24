@@ -109,11 +109,39 @@ export default function Overview() {
         <div className="eyebrow">
           CGWB · IN-GRES · National Assessment {coverage?.assessment_years.at(-1) ?? 2025}
         </div>
-        <h1 className="hero-title">India Groundwater Intelligence</h1>
+        <h1 className="hero-title">
+          India
+          <span className="hero-title-line2">Groundwater</span>
+        </h1>
         <p className="hero-sub">
           Explore groundwater through AI, spatial intelligence and historical analysis
           across {assessmentUnits || 0} assessment units.
         </p>
+        <p className="hero-sub-hindi">
+          भारत की भूजल स्थिति का कृत्रिम बुद्धिमत्ता, स्थानिक विश्लेषण और ऐतिहासिक डेटा के माध्यम से अन्वेषण।
+        </p>
+        <div className="hero-meta">
+          <div className="hero-meta-item">
+            <span className="hero-meta-label">States / UTs</span>
+            <span className="hero-meta-value">{coverage?.states_covered ?? 0}</span>
+          </div>
+          <div className="hero-meta-item">
+            <span className="hero-meta-label">Districts</span>
+            <span className="hero-meta-value">{coverage?.districts_covered ?? 0}</span>
+          </div>
+          <div className="hero-meta-item">
+            <span className="hero-meta-label">Assessment Units</span>
+            <span className="hero-meta-value">{assessmentUnits}</span>
+          </div>
+          <div className="hero-meta-item">
+            <span className="hero-meta-label">Data Source</span>
+            <span className="hero-meta-value">CGWB / IN-GRES</span>
+          </div>
+          <div className="hero-meta-item">
+            <span className="hero-meta-label">Total Records</span>
+            <span className="hero-meta-value">{coverage?.total_records ?? 0}</span>
+          </div>
+        </div>
       </div>
 
       <div className="kpi-strip">

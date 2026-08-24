@@ -2,20 +2,21 @@
 
 **Groundwater Intelligence Platform for India**
 
-जलदृष्टि DRISTI is a comprehensive groundwater assessment and monitoring platform covering all 36 states and union territories of India. It integrates official CGWB/IN-GRES data with an AI chat assistant, interactive map, trend analytics, risk scoring, and a bilingual learning center — all in a single deployable application.
+जलदृष्टि DRISTI is a comprehensive groundwater assessment and monitoring platform covering all 36 states and union territories of India. It integrates official CGWB/IN-GRES data with a fully functional AI chat assistant, interactive map, trend analytics, risk scoring, and a bilingual learning center — all in a single deployable application.
 
 ---
 
 ## Features
 
 - **Interactive Map** — Leaflet-based map with 192+ groundwater blocks color-coded by category (Safe, Semi-Critical, Critical, Over-Exploited), restricted to Indian boundaries
-- **AI Chat Assistant** — Natural language queries in English, Hindi, and Hinglish with 9+ intent types (status, compare, risk, top blocks, trend, category, help, search, export)
+- **AI Chat Assistant** — Fully functional chat with natural language queries in English, Hindi, and Hinglish. 9+ intent types: status, compare, risk, top blocks, trend, category, greeting, search, export. Evidence citations and suggested follow-ups in every response
 - **Trend Analytics** — Area chart showing extraction, recharge, and stage trends across 4 assessment years (2020, 2022, 2024, 2025)
 - **Risk Analysis** — AI-derived risk scores for each block based on extraction stage, recharge deficit, and multi-year trends
 - **Data Provenance** — Full source tracking with official data import, validation reports, and evidence citations
 - **Groundwater Learning Center** — Bilingual (English + Hindi) educational section covering measurement units (BCM, MCM, ham, m³), extraction stage formulas, core concepts, aquifer basics, and India usage breakdown
-- **Bilingual Design** — Hindi + English typography with Noto Sans Devanagari, Inter, and IBM Plex Mono across all views
+- **Bilingual Design** — Hindi + English typography with Noto Sans Devanagari, Inter, IBM Plex Mono, and Bebas Neue (display)
 - **State & District Coverage** — 914 total records (522 official + 392 district-level) across all 36 states/UTs, 4 assessment years, 8 categories
+- **Editorial Hero Design** — Dramatic full-viewport typography with metadata labels, inspired by premium editorial layouts
 
 ---
 
@@ -42,8 +43,8 @@ jaldrishti/
 │   │   │   ├── IndiaLeafletMap.tsx  # Leaflet interactive map (react-leaflet)
 │   │   │   ├── IndiaMap.tsx     # SVG India map (alternate)
 │   │   │   └── views/
-│   │   │       ├── Overview.tsx     # Dashboard with KPI cards + map
-│   │   │       ├── AIAssistant.tsx  # Chat interface
+│   │   │       ├── Overview.tsx     # Dashboard with KPI cards + map + editorial hero
+│   │   │       ├── AIAssistant.tsx  # Fully functional chat interface
 │   │   │       ├── MapView.tsx      # Full-screen Leaflet map
 │   │   │       ├── Analytics.tsx    # Trends and rankings
 │   │   │       ├── Compare.tsx      # Year-over-year comparison
@@ -51,9 +52,10 @@ jaldrishti/
 │   │   │       ├── DataSources.tsx  # Data provenance
 │   │   │       └── Learning.tsx     # Groundwater knowledge center (bilingual)
 │   │   ├── data/states.ts       # State data types and coordinates
-│   │   └── lib/api.ts           # API client
-│   └── index.html               # Google Fonts (Noto Sans Devanagari, Inter, IBM Plex Mono)
+│   │   └── lib/api.ts           # API client (fetchJson, sendChatMessage)
+│   └── index.html               # Google Fonts (Bebas Neue, Noto Sans Devanagari, Inter, IBM Plex Mono)
 ├── data/                        # SQLite database (gitignored)
+├── .env                         # Environment variables (gitignored)
 └── README.md
 ```
 
@@ -68,9 +70,11 @@ jaldrishti/
 | Backend | FastAPI, SQLAlchemy, Pydantic |
 | Database | SQLite |
 | Data Source | CGWB/IN-GRES via OpenCity.in CKAN API |
-| Hindi Font | Noto Sans Devanagari (300–700) |
+| Display Font | Bebas Neue (editorial headlines) |
+| Hindi Font | Noto Sans Devanari (300–700) |
 | English Font | Inter (300–800) |
 | Data Font | IBM Plex Mono (400–600) |
+| Env Config | python-dotenv |
 
 ---
 
@@ -156,6 +160,24 @@ python3 -m uvicorn main:app --host 0.0.0.0 --port 8000
 
 ---
 
+## Environment Variables
+
+Copy `.env` or create your own:
+
+```bash
+# Backend
+DATABASE_URL=sqlite:///data/jaldrishti.db
+CORS_ORIGINS=http://localhost:5173,http://localhost:8000
+HOST=0.0.0.0
+PORT=8000
+DEBUG=true
+
+# Frontend
+VITE_API_URL=http://localhost:8000
+```
+
+---
+
 ## API Endpoints
 
 | Endpoint | Method | Description |
@@ -173,6 +195,21 @@ python3 -m uvicorn main:app --host 0.0.0.0 --port 8000
 | `/api/data/export` | GET | Export as CSV |
 | `/api/chat` | POST | AI chat with natural language queries |
 | `/api/chat/parse` | POST | Parse intent without querying DB |
+
+---
+
+## AI Chat
+
+The AI assistant accepts natural language queries and returns structured responses with data, evidence, and follow-up suggestions.
+
+**Supported intents:** greeting, status, compare, top_extraction, critical_areas, trend, category, location, what_changed
+
+**Example queries:**
+- "What is the groundwater status of Punjab?"
+- "Compare Haryana between 2020 and 2024."
+- "Which districts have the highest extraction?"
+- "Show over-exploited areas in Rajasthan."
+- "राजस्थान की भूजल स्थिति बताओ" (Hindi)
 
 ---
 
@@ -241,6 +278,8 @@ All content is available in both English and Hindi (हिन्दी).
 - [x] Implement intent handlers: status, compare, trend, risk, top blocks, category, help, search, export
 - [x] Add source citations to all chat responses
 - [x] Build AI-derived risk scoring (extraction stage + recharge deficit + multi-year trend)
+- [x] Wire up frontend to backend `/api/chat` endpoint with full state management
+- [x] Add loading states, follow-up chips, suggested queries sidebar
 
 ### Phase 5: Analytics & Trend Features
 - [x] Build multi-year trend endpoint with 4 data points (2020, 2022, 2024, 2025)
@@ -252,7 +291,7 @@ All content is available in both English and Hindi (हिन्दी).
 
 ### Phase 6: Typography & Visual Identity
 - [x] Brand redesign: जलदृष्टि (Hindi) + DRISTI (English) + GROUNDWATER INTELLIGENCE
-- [x] Import Noto Sans Devanagari (Hindi), Inter (English), IBM Plex Mono (data)
+- [x] Import Bebas Neue (display), Noto Sans Devanagari (Hindi), Inter (English), IBM Plex Mono (data)
 - [x] Build bilingual sidebar navigation with Hindi secondary labels
 - [x] Add bilingual eyebrow prefixes to all view headers
 - [x] Create CSS typography scale (--text-xs through --text-3xl)
@@ -268,11 +307,15 @@ All content is available in both English and Hindi (हिन्दी).
 - [x] Add India usage breakdown (irrigation/domestic/industrial) with Hindi
 - [x] Add Hindi translations throughout all learning content
 
-### Phase 8: Search, Export & Deployment
-- [x] Add search bar in topbar (navigates to AI Assistant on Enter)
-- [x] Build CSV export endpoint with filtering
-- [x] Add `/api/data/search` endpoint for full-text search
+### Phase 8: Editorial Design & Polish
+- [x] Dramatic full-viewport hero typography (Bebas Neue, 110px)
+- [x] Editorial metadata labels (States, Districts, Data Source, Records)
+- [x] Hindi subtitle with opacity hierarchy
+- [x] Responsive design for mobile (42px title, wrapping meta)
+
+### Phase 9: Deployment
 - [x] Add static file serving to FastAPI for production deployment
+- [x] Add environment variable configuration with python-dotenv
 - [x] Write comprehensive README with clone instructions
 - [ ] Deploy with ngrok or similar tunneling for shareable access
 

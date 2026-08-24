@@ -186,12 +186,34 @@ export default function Learning() {
     <section className="view active">
       <div className="ov-hero">
         <div className="eyebrow">जलज्ञान · GROUNDWATER KNOWLEDGE</div>
-        <h1 className="hero-title">Groundwater Learning Center</h1>
+        <h1 className="hero-title">
+          Groundwater
+          <span className="hero-title-line2">Learning Center</span>
+        </h1>
         <p className="hero-sub">
           Essential concepts, definitions and real-world data to understand India's groundwater situation.
-          <br />
-          <span className="hero-sub-hindi">भारत की भूजल स्थिति को समझने के लिए आवश्यक अवधारणाएं, परिभाषाएं और वास्तविक डेटा।</span>
         </p>
+        <p className="hero-sub-hindi">
+          भारत की भूजल स्थिति को समझने के लिए आवश्यक अवधारणाएं, परिभाषाएं और वास्तविक डेटा।
+        </p>
+        <div className="hero-meta">
+          <div className="hero-meta-item">
+            <span className="hero-meta-label">Language</span>
+            <span className="hero-meta-value">EN / HI</span>
+          </div>
+          <div className="hero-meta-item">
+            <span className="hero-meta-label">Units Covered</span>
+            <span className="hero-meta-value">BCM, MCM, ham, m³</span>
+          </div>
+          <div className="hero-meta-item">
+            <span className="hero-meta-label">Concepts</span>
+            <span className="hero-meta-value">6 Core + 3 Aquifer</span>
+          </div>
+          <div className="hero-meta-item">
+            <span className="hero-meta-label">Data Source</span>
+            <span className="hero-meta-value">CGWB / IN-GRES</span>
+          </div>
+        </div>
       </div>
 
       <div className="learn-stats-strip">
