@@ -2,14 +2,18 @@
 
 **Groundwater Intelligence Platform for India**
 
-जलदृष्टि DRISTI is a comprehensive groundwater assessment and monitoring platform covering all 36 states and union territories of India. It integrates official CGWB/IN-GRES data with an AI-powered chat assistant "Jaladhi", interactive map, trend analytics, risk scoring, and a bilingual learning center — deployed on Supabase PostgreSQL.
+जलदृष्टि DRISTI is a comprehensive groundwater assessment and monitoring platform covering all 36 states and union territories of India. It integrates official CGWB/IN-GRES data with an AI-powered chat assistant "Jaladhi", interactive GeoJSON choropleth map, year-aware assessment timeline (2020–2026), trend analytics, risk scoring, and a bilingual learning center — deployed on Supabase PostgreSQL.
 
 ---
 
 ## Features
 
 - **Jaladhi AI Assistant** — Professional bilingual (English/Hindi) conversational assistant powered by Ollama LLM with hybrid RAG pipeline (TF-IDF retrieval + structured SQL data). Streaming responses, conversation memory, and 16 query types
-- **Interactive Map** — Leaflet-based map with groundwater blocks color-coded by category (Safe, Semi-Critical, Critical, Over-Exploited), restricted to Indian boundaries
+- **Interactive GeoJSON Map** — Leaflet-based choropleth map with state boundaries color-coded by groundwater category (Safe, Semi-Critical, Critical, Over-Exploited). Supports state and district drill-down with tooltips showing state name (EN+HI), category, extraction stage, recharge, and extraction values
+- **Year-Aware Assessment System (2020–2026)** — Dynamic assessment-year timeline with availability detection from Supabase. All map data, statistics, district details, and charts filter by selected year. Unavailable years shown dimmed with "Data unavailable" indicator
+- **Year Comparison** — Compare any two assessment years for a state. Shows block-level changes, stage/extraction/recharge deltas, category improvements/deteriorations, and overall trend
+- **Status History & Transitions** — Timeline of category transitions across available years with trend arrows (improved/deteriorated/unchanged)
+- **Historical Trend Charts** — Multi-year trend visualization with gaps for missing years (no fabricated data)
 - **Trend Analytics** — Area chart showing extraction, recharge, and stage trends across assessment years
 - **Risk Analysis** — AI-derived risk scores (0–100) for each state based on extraction stage, category distribution, historical trends, and risk concentration
 - **Data Provenance** — Full source tracking with official data import, validation reports, and evidence citations
@@ -25,7 +29,8 @@
 | Layer | Technology |
 |-------|-----------|
 | Frontend | React 19, TypeScript, Vite |
-| Map | react-leaflet, Leaflet, CartoDB dark tiles |
+| Map | react-leaflet, Leaflet, GeoJSON choropleth, CartoDB dark tiles |
+| GeoJSON Data | India state boundaries (35 features), district boundaries (594 features) |
 | Backend | FastAPI, SQLAlchemy, Pydantic |
 | Database | **Supabase PostgreSQL** (hosted) |
 | Data Source | CGWB/IN-GRES via OpenCity.in CKAN API |
@@ -44,7 +49,7 @@
 ```
 jaldrishti/
 ├── backend/
-│   ├── main.py                  # FastAPI app (36+ endpoints, streaming, CORS)
+│   ├── main.py                  # FastAPI app (40+ endpoints, streaming, CORS)
 │   ├── database.py              # SQLAlchemy models (7 tables)
 │   ├── config.py                # Centralized configuration
 │   ├── smart_chat.py            # Hybrid SQL+RAG chat pipeline
@@ -63,24 +68,32 @@ jaldrishti/
 │       ├── import_ingres_data.py    # Data ingestion from OpenCity.in
 │       └── validate_ingres_data.py  # Data quality validation
 ├── frontend/
+│   ├── public/
+│   │   └── data/
+│   │       ├── india_states.geojson      # India state boundaries (1.5MB, 35 features)
+│   │       └── india_districts.geojson   # India district boundaries (2.8MB, 594 features)
 │   ├── src/
 │   │   ├── App.tsx              # App shell with view routing
-│   │   ├── App.css              # Design system (CSS variables, typography scale)
+│   │   ├── App.css              # Design system (CSS variables, typography, map styles)
+│   │   ├── vite-env.d.ts        # TypeScript declarations (GeoJSON module)
 │   │   ├── components/
-│   │   │   ├── Sidebar.tsx      # Bilingual navigation ("Jaladhi" / "जलाधि")
+│   │   │   ├── Sidebar.tsx      # Bilingual navigation
 │   │   │   ├── Topbar.tsx       # Search input, year selector, AI button
-│   │   │   ├── IndiaLeafletMap.tsx  # Leaflet interactive map
+│   │   │   ├── IndiaLeafletMap.tsx  # Leaflet + GeoJSON choropleth map
 │   │   │   └── views/
 │   │   │       ├── Overview.tsx     # Dashboard with KPI cards + map
 │   │   │       ├── AIAssistant.tsx  # Jaladhi chat with streaming
-│   │   │       ├── MapView.tsx      # Full-screen Leaflet map
+│   │   │       ├── MapView.tsx      # Full intelligence map (modes, year timeline, panels)
 │   │   │       ├── Analytics.tsx    # Trends and rankings
 │   │   │       ├── Compare.tsx      # Year-over-year comparison
 │   │   │       ├── Reports.tsx      # Report generation
 │   │   │       ├── DataSources.tsx  # Data provenance
 │   │   │       └── Learning.tsx     # Groundwater knowledge center
-│   │   ├── data/states.ts       # State data types and coordinates
-│   │   └── lib/api.ts           # API client (smart chat, streaming, groundwater data)
+│   │   ├── data/
+│   │   │   ├── stateMap.ts      # GeoJSON↔DB name mapping, status colors, color scales
+│   │   │   └── states.ts       # State data types and ViewKey definition
+│   │   └── lib/
+│   │       └── api.ts           # API client (chat, streaming, groundwater, year-aware endpoints)
 │   └── index.html               # Google Fonts
 ├── data/                        # SQLite database (fallback, gitignored)
 ├── .env                         # Environment variables (gitignored)
@@ -383,9 +396,21 @@ python3 -m uvicorn main:app --host 0.0.0.0 --port 8000
 | `/api/states` | GET | State-level summary |
 | `/api/districts` | GET | District-level data |
 | `/api/blocks` | GET | Block-level data with coordinates |
-| `/api/assessments` | GET | Assessment records (filtered) |
+| `/api/assessments` | GET | Assessment records (filtered by state/year/category) |
 | `/api/assessment/latest` | GET | Latest year assessments |
 | `/api/assessment/history` | GET | Block assessment history |
+| `/api/groundwater/state/{state}` | GET | Comprehensive state groundwater data |
+| `/api/groundwater/district/{state}` | GET | District data for a state |
+| `/api/groundwater/block/{state}` | GET | Block data for a state |
+| `/api/groundwater/overview` | GET | National overview (all years) |
+
+### Year-Aware Assessment
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/groundwater/assessment-years` | GET | Available assessment years (2020–2026) with availability status |
+| `/api/groundwater/overview-year?year=` | GET | Year-specific national overview |
+| `/api/groundwater/year-compare?state=&year1=&year2=` | GET | YoY comparison with block-level changes |
+| `/api/groundwater/status-transitions?state=` | GET | Category transitions across years |
 
 ### Analytics
 | Endpoint | Method | Description |
@@ -395,6 +420,9 @@ python3 -m uvicorn main:app --host 0.0.0.0 --port 8000
 | `/api/analytics/trend` | GET | Multi-year trend data |
 | `/api/analytics/what-changed` | GET | Year-over-year changes |
 | `/api/analytics/risk-score` | GET | AI-derived risk scores |
+| `/api/groundwater/rankings` | GET | State rankings by extraction stage |
+| `/api/groundwater/trends/{state}` | GET | Multi-year trend for a state |
+| `/api/groundwater/over-exploited` | GET | Over-exploited blocks list |
 
 ### AI Chat (Jaladhi)
 | Endpoint | Method | Description |
@@ -465,6 +493,8 @@ Jaladhi is the intelligent groundwater assistant built into the platform.
 
 **Total: 912 records** across 36 states, 285 districts, 192 blocks, 4 years.
 
+**Available assessment years:** 2020, 2022, 2024, 2025 (2021, 2023, 2026 not yet in database)
+
 Data sourced from **OpenCity.in** CKAN Datastore API with full provenance tracking.
 
 > **Note:** जलदृष्टि DRISTI is a prototype. Official groundwater data should be verified against primary CGWB/IN-GRES sources for policy or operational decisions.
@@ -491,6 +521,9 @@ Data sourced from **OpenCity.in** CKAN Datastore API with full provenance tracki
 | Phase 12: Source Count Fix | ✅ | Improved retrieval, Hindi keyword mapping |
 | Phase 13: Production Upgrade | ✅ | Geo resolver, query router, numeric calc, streaming |
 | Phase 14: Supabase Migration | ✅ | PostgreSQL on Supabase, REST API client, data migration |
+| Phase 15: GeoJSON Choropleth Map | ✅ | Leaflet + GeoJSON state/district boundaries, color-coded by category |
+| Phase 16: Year-Aware Assessment | ✅ | 2020–2026 timeline, availability detection, year-specific filtering |
+| Phase 17: Year Comparison | ✅ | YoY block-level comparison, category transitions, status history |
 
 ### Currently Working
 
@@ -498,7 +531,10 @@ Data sourced from **OpenCity.in** CKAN Datastore API with full provenance tracki
 |---------|--------|-------------|
 | Jaladhi AI Assistant | ✅ Done | LLM-only mode, streaming, bilingual |
 | Supabase Database | ✅ Done | 912 records on PostgreSQL |
-| Interactive Map | ✅ Done | Leaflet with category-colored markers |
+| GeoJSON Choropleth Map | ✅ Done | State + district boundaries, 35 states, 594 districts |
+| Year-Aware Timeline | ✅ Done | 2020–2026 with availability detection |
+| Year Comparison | ✅ Done | Block-level YoY comparison |
+| Status Transitions | ✅ Done | Category transition history across years |
 | Trend Analytics | ✅ Done | Multi-year extraction/recharge/stage charts |
 | Risk Scoring | ✅ Done | AI-derived 0-100 risk scores per state |
 | Learning Center | ✅ Done | Bilingual educational content |
@@ -506,34 +542,34 @@ Data sourced from **OpenCity.in** CKAN Datastore API with full provenance tracki
 
 ### Upcoming Features
 
-#### Phase 15: Water Quality & Levels
+#### Phase 18: Water Quality & Levels
 - [ ] Groundwater quality data integration (fluoride, arsenic, nitrate, iron, TDS)
 - [ ] Pre/post monsoon water level tracking
 - [ ] Quality heatmap overlays on map
 - [ ] Contamination risk alerts
 
-#### Phase 16: Advanced Analytics
+#### Phase 19: Advanced Analytics
 - [ ] Predictive modeling — forecast extraction trends 5 years ahead
 - [ ] Anomaly detection — flag unusual extraction spikes
 - [ ] District-level heatmaps with drill-down
 - [ ] Water budget calculator — input area, get recharge/extraction estimates
 - [ ] Satellite data integration (NASA GRACE groundwater storage)
 
-#### Phase 17: User Features
+#### Phase 20: User Features
 - [ ] User authentication (JWT-based via Supabase Auth)
 - [ ] Saved queries and bookmarks
 - [ ] Custom dashboards — pin favorite states/districts
 - [ ] Alert system — email/SMS when extraction crosses threshold
 - [ ] Compare tool — side-by-side state comparison
 
-#### Phase 18: Data Expansion
+#### Phase 21: Data Expansion
 - [ ] Real-time CGWB data sync (webhook/API polling)
 - [ ] Rainfall data integration (IMD records)
 - [ ] Crop water requirement data (CGWB crop coefficient tables)
 - [ ] Borewell registration data (state-level)
 - [ ] Extensible ingestion framework for new data sources
 
-#### Phase 19: Mobile & Deployment
+#### Phase 22: Mobile & Deployment
 - [ ] Progressive Web App (PWA) with offline support
 - [ ] React Native mobile app
 - [ ] Docker containerization
