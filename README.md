@@ -1,8 +1,8 @@
-# जलदृष्टि DRISTI
+# जल DRISTHI
 
 **Groundwater Intelligence Platform for India**
 
-जलदृष्टि DRISTI is a comprehensive groundwater assessment and monitoring platform covering all 36 states and union territories of India. It integrates official CGWB/IN-GRES data with an AI-powered chat assistant "Jaladhi", interactive GeoJSON choropleth map, year-aware assessment timeline (2020–2026), trend analytics, risk scoring, and a bilingual learning center — deployed on Supabase PostgreSQL.
+जल DRISTHI is a comprehensive groundwater assessment and monitoring platform covering all 36 states and union territories of India. It integrates official CGWB/IN-GRES data with an AI-powered chat assistant "Jaladhi", interactive GeoJSON choropleth map, year-aware assessment timeline (2020–2026), trend analytics, risk scoring, and a bilingual learning center — deployed on Supabase PostgreSQL.
 
 ---
 
@@ -497,7 +497,7 @@ Jaladhi is the intelligent groundwater assistant built into the platform.
 
 Data sourced from **OpenCity.in** CKAN Datastore API with full provenance tracking.
 
-> **Note:** जलदृष्टि DRISTI is a prototype. Official groundwater data should be verified against primary CGWB/IN-GRES sources for policy or operational decisions.
+> **Note:** जल DRISTHI is a prototype. Official groundwater data should be verified against primary CGWB/IN-GRES sources for policy or operational decisions.
 
 ---
 

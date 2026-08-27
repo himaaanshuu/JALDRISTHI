@@ -119,7 +119,7 @@ export default function DataSources() {
           <ArrowIcon />
         </div>
         <div className="flow-node">
-          <div className="fn-name">जलदृष्टि DRISTI</div>
+          <div className="fn-name">जल DRISTHI</div>
           <div className="fn-desc">AI-powered spatial intelligence &amp; assistant layer</div>
         </div>
       </div>

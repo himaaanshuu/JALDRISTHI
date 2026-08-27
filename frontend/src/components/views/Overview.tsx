@@ -128,7 +128,7 @@ export default function Overview() {
         </div>
         <h1 className="hero-title">
           <span className="brand-hindi">जल</span>
-          <span className="hero-title-line2">DRISTI</span>
+          <span className="hero-title-line2">DRISTHI</span>
         </h1>
         <p className="hero-sub">
           INGRES AI-powered groundwater intelligence platform for India

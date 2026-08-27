@@ -252,7 +252,7 @@ export default function AIAssistant() {
                     <path d="M8 17c1.5 2 3 2.8 4 2.8s2.5-.8 4-2.8" />
                   </svg>
                 </div>
-                <h2 className="assist-welcome-title">जलदृष्टि DRISTI</h2>
+                <h2 className="assist-welcome-title">जल DRISTHI</h2>
                 <p className="assist-welcome-sub">
                   Professional groundwater intelligence for all 36 Indian states and union territories.
                   Ask about extraction, recharge, trends, comparisons, quality, and management.

@@ -131,7 +131,7 @@ export default function Sidebar({ active, onNavigate, open }: SidebarProps) {
           </span>
           <div className="brand-name-block">
             <span className="brand-hindi">जल</span>
-            <span className="brand-english">DRISTI</span>
+            <span className="brand-english">DRISTHI</span>
           </div>
         </div>
         <div className="brand-sub">INGRES AI Chatbot</div>
