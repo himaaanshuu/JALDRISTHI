@@ -122,29 +122,64 @@ source venv/bin/activate   # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-### 3. Set up Supabase
+### 3. Set up Supabase (Database)
 
-1. Create a free account at https://supabase.com
-2. Create a new project (any name, any region)
-3. Go to **Settings → API** and copy:
-   - **Project URL** (e.g., `https://your-project.supabase.co`)
-   - **Anon/Publishable Key** (starts with `eyJ...`)
-4. Go to **Settings → Database** and copy the **Database Password**
-5. Go to **SQL Editor** and run the migration:
+Supabase hosts the PostgreSQL database for all groundwater data. The free tier is sufficient.
 
-```sql
--- Paste the contents of backend/scripts/migrate_supabase.sql
--- Or run it directly from the file
-```
+#### Step 3.1 — Create a Supabase Account
 
-6. Create your `.env` file:
+1. Go to **https://supabase.com** and sign up (GitHub login is fastest)
+2. Verify your email if prompted
+
+#### Step 3.2 — Create a New Project
+
+1. Click **"New project"** on the dashboard
+2. Fill in:
+   - **Organization**: Select your org (or create one)
+   - **Project name**: `jaldrishti` (or anything you like)
+   - **Database password**: Choose a strong password — **save this somewhere**, you'll need it later
+   - **Region**: Choose the closest to you (e.g., `Mumbai` for India)
+3. Click **"Create new project"** and wait ~2 minutes for it to spin up
+
+#### Step 3.3 — Get Your API Credentials
+
+Once the project is ready:
+
+1. Go to **Settings** (gear icon, bottom-left) → **API**
+2. Copy these two values:
+
+| Credential | Where to find it | Example |
+|-----------|-----------------|---------|
+| **Project URL** | Settings → API → Project URL | `https://abc123xyz.supabase.co` |
+| **Anon Key** | Settings → API → `anon` `public` key | `eyJhbGciOiJIUzI1NiIs...` (starts with `eyJ`) |
+
+3. Go to **Settings** → **Database** → **Connection string** → **URI**
+4. Copy the **password** from the connection string (the part after `:` and before `@`)
+
+> **Tip:** The URI looks like: `postgresql://postgres.[project-ref]:YOUR_PASSWORD@aws-0-...pooler.supabase.com:6543/postgres`
+> You only need the **password** portion.
+
+#### Step 3.4 — Create Database Tables
+
+1. In the Supabase dashboard, click **SQL Editor** (left sidebar)
+2. Click **"New query"**
+3. Open the file `backend/scripts/migrate_supabase.sql` from this repo and paste its **entire contents** into the editor
+4. Click **"Run"** (or press `Ctrl+Enter` / `Cmd+Enter`)
+5. You should see: `Success. No rows returned`
+
+This creates 7 tables: `groundwater`, `data_sources`, `water_readings`, `groundwater_quality`, `groundwater_levels`, `conversation_history`, `dataset_versions` — plus indexes and row-level security policies.
+
+> **Verify:** Go to **Table Editor** (left sidebar) and you should see all 7 tables listed.
+
+#### Step 3.5 — Configure Environment Variables
+
+1. From the project root, copy the example env file:
 
 ```bash
 cp .env.example .env
-# Edit .env with your Supabase credentials
 ```
 
-Your `.env` should look like:
+2. Open `.env` and fill in your Supabase credentials:
 
 ```env
 # Backend
@@ -161,19 +196,99 @@ LLM_MODEL=llama3.1:8b
 # Frontend
 VITE_API_URL=http://localhost:8000
 
-# Supabase
-SUPABASE_URL=https://your-project.supabase.co
-SUPABASE_ANON_KEY=your-anon-key-here
-SUPABASE_DB_PASSWORD=your-db-password-here
+# Supabase — FILL IN YOUR VALUES
+SUPABASE_URL=https://abc123xyz.supabase.co          # Your Project URL
+SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIs...           # Your Anon Key
+SUPABASE_DB_PASSWORD=your-strong-password-here       # Your DB Password
 USE_SUPABASE=true
 ```
 
-7. Migrate data from SQLite to Supabase:
+> **Important:** Never commit `.env` to git. It's already in `.gitignore`.
+
+#### Step 3.6 — Migrate Data to Supabase
+
+Run the migration script to transfer all 912 groundwater records from the local SQLite database to Supabase:
 
 ```bash
 cd backend
 PYTHONPATH=. python3 scripts/migrate_to_supabase.py
 ```
+
+Expected output:
+```
+============================================================
+JAL-DRISHTI: SQLite → Supabase Migration
+============================================================
+Supabase connection: OK
+
+  Migrating data_sources: 4 rows...
+    [4/4] inserted
+  [DONE] data_sources: 4/4 rows migrated
+
+  Migrating groundwater: 522 rows...
+    [50/522] inserted
+    ...
+    [522/522] inserted
+  [DONE] groundwater: 522/522 rows migrated
+
+  Migrating water_readings: 40 rows...
+    [40/40] inserted
+  [DONE] water_readings: 40/40 rows migrated
+
+Migration complete! Total rows: 566
+```
+
+Then run the state-level migration:
+
+```bash
+PYTHONPATH=. python3 -c "
+import sys; sys.path.insert(0, '.')
+from dotenv import load_dotenv; load_dotenv('../.env')
+import sqlite3
+from supabase_client import sb_insert, sb_count
+
+conn = sqlite3.connect('../data/jaldrishti.db')
+conn.row_factory = sqlite3.Row
+c = conn.cursor()
+c.execute('SELECT * FROM groundwater WHERE block = \"\" OR block IS NULL')
+rows = [dict(r) for r in c.fetchall()]
+conn.close()
+
+clean_rows = [{k: v for k, v in r.items() if k != 'id'} for r in rows]
+for i in range(0, len(clean_rows), 50):
+    sb_insert('groundwater', clean_rows[i:i+50])
+    print(f'  [{min(i+50, len(clean_rows))}/{len(clean_rows)}]')
+
+print(f'Total: {sb_count(\"groundwater\")} rows')
+"
+```
+
+#### Step 3.7 — Verify the Migration
+
+```bash
+PYTHONPATH=. python3 -c "
+import sys; sys.path.insert(0, '.')
+from dotenv import load_dotenv; load_dotenv('../.env')
+from supabase_client import sb_count
+
+print(f'Groundwater: {sb_count(\"groundwater\")} rows')
+print(f'Data Sources: {sb_count(\"data_sources\")} rows')
+print(f'Water Readings: {sb_count(\"water_readings\")} rows')
+"
+```
+
+Expected: `Groundwater: 912 rows`
+
+#### Supabase Troubleshooting
+
+| Problem | Solution |
+|---------|----------|
+| `Invalid API key` | Check `SUPABASE_ANON_KEY` in `.env` — must start with `eyJ` |
+| `relation "groundwater" does not exist` | Run the SQL migration in Step 3.4 |
+| `password authentication failed` | Check `SUPABASE_DB_PASSWORD` in `.env` |
+| `Could not find the table in the schema cache` | Wait 30 seconds after running SQL, then try again (schema cache refresh) |
+| Migration script hangs | Check your internet connection, Supabase may be temporarily slow |
+| `ModuleNotFoundError: No module named 'supabase'` | Run `pip install supabase` in your virtual environment |
 
 ### 4. Set up Ollama (for AI chat)
 
