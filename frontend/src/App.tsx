@@ -1,4 +1,9 @@
 import { useState } from "react";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { AuthProvider } from "./components/auth/AuthContext";
+import ProtectedRoute from "./components/auth/ProtectedRoute";
+import AuthCallback from "./components/auth/AuthCallback";
+import ProfilePage from "./components/auth/ProfilePage";
 import Sidebar from "./components/Sidebar";
 import Topbar from "./components/Topbar";
 import Overview from "./components/views/Overview";
@@ -9,10 +14,12 @@ import Compare from "./components/views/Compare";
 import Reports from "./components/views/Reports";
 import DataSources from "./components/views/DataSources";
 import Learning from "./components/views/Learning";
+import WaterQuality from "./components/views/WaterQuality";
 import type { ViewKey } from "./data/states";
 import "./App.css";
+import "./Auth.css";
 
-export default function App() {
+function MainApp() {
   const [view, setView] = useState<ViewKey>("overview");
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -35,7 +42,36 @@ export default function App() {
         {view === "reports" && <Reports />}
         {view === "sources" && <DataSources />}
         {view === "learning" && <Learning />}
+        {view === "quality" && <WaterQuality />}
       </main>
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <BrowserRouter>
+      <AuthProvider>
+        <Routes>
+          <Route path="/auth/callback" element={<AuthCallback />} />
+          <Route
+            path="/profile"
+            element={
+              <ProtectedRoute>
+                <ProfilePage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/*"
+            element={
+              <ProtectedRoute requireAuth={false}>
+                <MainApp />
+              </ProtectedRoute>
+            }
+          />
+        </Routes>
+      </AuthProvider>
+    </BrowserRouter>
   );
 }

@@ -100,6 +100,40 @@ def sb_count(table: str, filters: Dict[str, Any] = None) -> int:
     return result.count or 0
 
 
+def supabase_request(method: str, path: str, json_data: Any = None,
+                     params: Dict[str, str] = None) -> Any:
+    """Make a raw HTTP request to Supabase REST API (for auth routes)."""
+    import requests
+    url = f"{SUPABASE_URL}/rest/v1{path}"
+    headers = {
+        "apikey": SUPABASE_KEY,
+        "Authorization": f"Bearer {SUPABASE_KEY}",
+        "Content-Type": "application/json",
+        "Prefer": "return=representation",
+    }
+    try:
+        if method == "GET":
+            resp = requests.get(url, headers=headers, params=params, timeout=10)
+        elif method == "POST":
+            resp = requests.post(url, headers=headers, json=json_data, timeout=10)
+        elif method == "PATCH":
+            resp = requests.patch(url, headers=headers, json=json_data, timeout=10)
+        elif method == "DELETE":
+            resp = requests.delete(url, headers=headers, timeout=10)
+        else:
+            return None
+        if resp.status_code in (200, 201, 204):
+            try:
+                return resp.json()
+            except Exception:
+                return []
+        logger.warning(f"Supabase request failed: {resp.status_code} {resp.text[:200]}")
+        return None
+    except Exception as e:
+        logger.error(f"Supabase request error: {e}")
+        return None
+
+
 # ─── Groundwater-Specific Queries ────────────────────────────────────────────
 
 def fetch_state_data(state: str, year: int) -> Optional[Dict]:

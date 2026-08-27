@@ -308,6 +308,88 @@
   gap: 1px;
 }
 
+/* Sidebar User Section */
+.sidebar-user {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-3);
+  border-radius: var(--radius-sm);
+  margin-bottom: var(--sp-2);
+}
+
+.sidebar-user-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+  background: linear-gradient(135deg, #1a5276, #27ae60);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sidebar-user-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.sidebar-user-avatar span {
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  font-family: var(--font-ui);
+}
+
+.sidebar-user-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar-user-name {
+  font-family: var(--font-ui);
+  font-size: 12px;
+  font-weight: 600;
+  color: #d0e8ec;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sidebar-user-role {
+  font-family: var(--font-ui);
+  font-size: 10px;
+  color: #7a9ea4;
+  text-transform: capitalize;
+}
+
+.sidebar-user-btn {
+  background: none;
+  border: none;
+  padding: 4px;
+  cursor: pointer;
+  color: #7a9ea4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  transition: all 0.15s;
+}
+
+.sidebar-user-btn:hover {
+  color: #b53232;
+  background: rgba(181, 50, 50, 0.1);
+}
+
+.sidebar-user-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
 .sys-status {
   display: flex;
   align-items: center;
@@ -4288,4 +4370,308 @@
   .metric-num .metric-amount {
     font-size: 15px;
   }
+}
+
+/* ============================= WATER QUALITY ============================= */
+
+.wq-page {
+  margin: var(--sp-5);
+}
+
+.wq-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: var(--sp-6);
+  gap: var(--sp-4);
+  flex-wrap: wrap;
+}
+
+.wq-title {
+  font-family: var(--font-display);
+  font-size: 28px;
+  color: var(--deep-water);
+  margin: 0 0 4px;
+}
+
+.wq-subtitle {
+  font-family: var(--font-ui);
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.wq-controls {
+  display: flex;
+  gap: var(--sp-3);
+  align-items: center;
+}
+
+.wq-select {
+  padding: 8px 12px;
+  border: 1px solid var(--panel-line);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-ui);
+  font-size: 13px;
+  color: var(--text-primary);
+  background: var(--panel);
+  min-width: 180px;
+  cursor: pointer;
+}
+
+.wq-select:focus {
+  outline: none;
+  border-color: var(--water-blue);
+}
+
+.wq-loading,
+.wq-error,
+.wq-empty {
+  text-align: center;
+  padding: var(--sp-8);
+}
+
+.wq-loading {
+  color: var(--text-secondary);
+  font-family: var(--font-ui);
+}
+
+.wq-error {
+  color: #b53232;
+  font-family: var(--font-ui);
+  font-size: 14px;
+  background: rgba(180, 50, 50, 0.08);
+  border: 1px solid rgba(180, 50, 50, 0.15);
+  border-radius: var(--radius-md);
+}
+
+.wq-empty h2 {
+  font-family: var(--font-display);
+  font-size: 22px;
+  color: var(--deep-water);
+  margin: var(--sp-4) 0 var(--sp-2);
+}
+
+.wq-empty p {
+  font-family: var(--font-ui);
+  font-size: 13px;
+  color: var(--text-secondary);
+  max-width: 480px;
+  margin: 0 auto var(--sp-5);
+}
+
+.wq-empty-icon {
+  margin-bottom: var(--sp-2);
+}
+
+.wq-standards-preview {
+  background: var(--panel);
+  border: 1px solid var(--panel-line);
+  border-radius: var(--radius-md);
+  padding: var(--sp-5);
+  max-width: 560px;
+  margin: 0 auto;
+}
+
+.wq-standards-preview h3 {
+  font-family: var(--font-ui);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--deep-water);
+  margin: 0 0 var(--sp-4);
+}
+
+.wq-standards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: var(--sp-3);
+}
+
+.wq-standard-card {
+  display: flex;
+  flex-direction: column;
+  padding: var(--sp-3);
+  background: var(--bg);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--panel-line);
+}
+
+.wq-std-name {
+  font-family: var(--font-ui);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.wq-std-limit {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--water-blue);
+  margin-top: 2px;
+}
+
+/* Water Quality Results */
+.wq-results {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-5);
+}
+
+.wq-summary {
+  background: var(--panel);
+  border: 1px solid var(--panel-line);
+  border-radius: var(--radius-md);
+  padding: var(--sp-5);
+}
+
+.wq-summary h2 {
+  font-family: var(--font-display);
+  font-size: 24px;
+  color: var(--deep-water);
+  margin: 0 0 var(--sp-4);
+}
+
+.wq-summary-stats {
+  display: flex;
+  gap: var(--sp-5);
+  flex-wrap: wrap;
+}
+
+.wq-stat {
+  display: flex;
+  flex-direction: column;
+  padding: var(--sp-3) var(--sp-4);
+  background: var(--bg);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--panel-line);
+  min-width: 100px;
+}
+
+.wq-stat-value {
+  font-family: var(--font-display);
+  font-size: 28px;
+  color: var(--deep-water);
+}
+
+.wq-stat-label {
+  font-family: var(--font-ui);
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+
+.wq-districts h3 {
+  font-family: var(--font-ui);
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--deep-water);
+  margin: 0 0 var(--sp-3);
+}
+
+.wq-district-card {
+  background: var(--panel);
+  border: 1px solid var(--panel-line);
+  border-radius: var(--radius-sm);
+  margin-bottom: var(--sp-2);
+  overflow: hidden;
+}
+
+.wq-district-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--sp-3) var(--sp-4);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.wq-district-header:hover {
+  background: var(--bg);
+}
+
+.wq-district-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.wq-district-name {
+  font-family: var(--font-ui);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.wq-district-samples {
+  font-family: var(--font-ui);
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.wq-district-status {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+}
+
+.wq-status-badge {
+  padding: 2px 10px;
+  border-radius: 10px;
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: 600;
+  color: #fff;
+  text-transform: capitalize;
+}
+
+.wq-exceeded-params {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: #b53232;
+}
+
+.wq-district-detail {
+  padding: var(--sp-3) var(--sp-4) var(--sp-4);
+  border-top: 1px solid var(--panel-line);
+}
+
+.wq-sample-bars {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.wq-bar-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+}
+
+.wq-bar-label {
+  font-family: var(--font-ui);
+  font-size: 11px;
+  color: var(--text-secondary);
+  width: 60px;
+  text-align: right;
+}
+
+.wq-bar-track {
+  flex: 1;
+  height: 8px;
+  background: var(--bg);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.wq-bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+.wq-bar-count {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-primary);
+  width: 24px;
+  text-align: right;
 }

@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import type { ViewKey } from "../data/states";
+import { useAuth } from "./auth/AuthContext";
 
 interface NavEntry {
   key: ViewKey;
@@ -101,6 +102,17 @@ const navEntries: NavEntry[] = [
       </svg>
     ),
   },
+  {
+    key: "quality",
+    label: "Water Quality",
+    hindi: "जल गुणवत्ता",
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6}>
+        <path d="M12 2a7 7 0 017 7c0 3-2 5.5-4 7.5L12 20l-3-3.5C7 14.5 5 12 5 9a7 7 0 017-7z" />
+        <path d="M8 16l4 4 4-4" />
+      </svg>
+    ),
+  },
 ];
 
 interface SidebarProps {
@@ -110,6 +122,15 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ active, onNavigate, open }: SidebarProps) {
+  const { user, signOut } = useAuth();
+  const displayName = user?.user_metadata?.full_name
+    || user?.user_metadata?.name
+    || user?.email
+    || user?.phone
+    || "User";
+  const avatarUrl = user?.user_metadata?.avatar_url;
+  const initial = displayName[0]?.toUpperCase() || "U";
+
   return (
     <aside className={`sidebar${open ? " open" : ""}`} id="sidebar">
       <div className="brand" style={{ cursor: "pointer" }} onClick={() => onNavigate("overview")}>
@@ -187,6 +208,32 @@ export default function Sidebar({ active, onNavigate, open }: SidebarProps) {
       </nav>
 
       <div className="sidebar-foot">
+        {user && (
+          <div className="sidebar-user">
+            <div className="sidebar-user-avatar">
+              {avatarUrl ? (
+                <img src={avatarUrl} alt="" />
+              ) : (
+                <span>{initial}</span>
+              )}
+            </div>
+            <div className="sidebar-user-info">
+              <span className="sidebar-user-name">{displayName}</span>
+              <span className="sidebar-user-role">{user.app_metadata?.role || "user"}</span>
+            </div>
+            <button
+              className="sidebar-user-btn"
+              onClick={signOut}
+              title="Sign out"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6}>
+                <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" />
+                <polyline points="16,17 21,12 16,7" />
+                <line x1="21" y1="12" x2="9" y2="12" />
+              </svg>
+            </button>
+          </div>
+        )}
         <div className="sys-status">
           <span className="dot-live" /> System Status · Operational
         </div>

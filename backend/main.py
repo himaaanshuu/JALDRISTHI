@@ -2762,6 +2762,15 @@ def status_transitions(state: str = Query(...)):
     }
 
 
+# ─── Auth Routes ────────────────────────────────────────────────────────────
+
+from auth_routes import router as auth_router
+app.include_router(auth_router)
+
+from water_quality_routes import router as wq_router
+app.include_router(wq_router)
+
+
 # --- Serve built frontend ---
 STATIC_DIR = os.path.join(os.path.dirname(__file__), "..", "frontend", "dist")
 

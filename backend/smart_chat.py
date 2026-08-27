@@ -515,10 +515,37 @@ def _build_sql_context(query_type: QueryType, entities: Dict, classified: Classi
                            f"{b['groundwater_extraction']:,.0f} MCM ({b['assessment_year']})")
 
     elif query_type == QueryType.QUALITY:
-        parts.append("Groundwater quality data is available through official CGWB monitoring stations.")
-        parts.append("Key parameters: Fluoride, Arsenic, Nitrate, Iron, TDS, pH, Chloride.")
-        if state:
-            parts.append(f"Quality assessment for {state} is part of the CGWB annual monitoring program.")
+        if state and USE_SUPABASE:
+            try:
+                from supabase_client import sb_select
+                wq_records = sb_select("groundwater_quality", filters={"state": state}, limit=50)
+                if wq_records:
+                    parts.append(f"Water quality data for {state} ({len(wq_records)} samples):")
+                    # Aggregate parameters
+                    param_vals = {}
+                    for r in wq_records:
+                        for p in ["fluoride_mg_l", "arsenic_ug_l", "nitrate_mg_l", "iron_mg_l", "tds_mg_l", "ph"]:
+                            v = r.get(p)
+                            if v is not None:
+                                param_vals.setdefault(p, []).append(v)
+                    limits = {"fluoride_mg_l": 1.0, "arsenic_ug_l": 10, "nitrate_mg_l": 45, "iron_mg_l": 0.3, "tds_mg_l": 500, "ph": 8.5}
+                    for p, vals in param_vals.items():
+                        avg = sum(vals) / len(vals)
+                        mx = max(vals)
+                        limit = limits.get(p, 0)
+                        status = "within BIS limit" if mx <= limit else f"EXCEEDS BIS limit ({limit})"
+                        parts.append(f"  {p.replace('_mg_l','').replace('_ug_l','').replace('_',' ').title()}: avg={avg:.2f}, max={mx:.2f} - {status}")
+                else:
+                    parts.append(f"No water quality monitoring data available for {state} yet.")
+                    parts.append("Key parameters monitored: Fluoride, Arsenic, Nitrate, Iron, TDS, pH.")
+            except Exception:
+                parts.append("Groundwater quality data is available through official CGWB monitoring stations.")
+                parts.append("Key parameters: Fluoride, Arsenic, Nitrate, Iron, TDS, pH, Chloride.")
+        else:
+            parts.append("Groundwater quality data is available through official CGWB monitoring stations.")
+            parts.append("Key parameters: Fluoride, Arsenic, Nitrate, Iron, TDS, pH, Chloride.")
+            if state:
+                parts.append(f"Quality assessment for {state} is part of the CGWB annual monitoring program.")
 
     elif query_type == QueryType.LEVEL:
         parts.append("Groundwater level data is monitored through CGWB observation wells.")
