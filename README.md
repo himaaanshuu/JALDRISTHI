@@ -354,6 +354,67 @@ All content is available in both English and Hindi (हिन्दी).
 - [x] Write comprehensive README with clone instructions
 - [ ] Deploy with ngrok or similar tunneling for shareable access
 
+### Phase 10: LLM Integration (Ollama)
+- [x] Install Ollama + pull llama3.1:8b model
+- [x] Create RAG pipeline with TF-IDF retrieval + Ollama generation
+- [x] Build 33-document knowledge base (aquifers, contamination, policies, state data)
+- [x] Add SQLite DB integration for real-time state/district/block queries
+- [x] Add /api/llm/chat, /api/llm/health, /api/llm/rebuild endpoints
+- [x] Frontend mode toggle (Rule-Based / LLM)
+- [x] Language selector (English / Hindi) for pure language responses
+- [x] Optimized for speed: HTTP API instead of subprocess, 2048 context
+
+---
+
+## Implementation Plan — What's Next
+
+### Currently Working
+| Feature | Status | Description |
+|---------|--------|-------------|
+| Interactive Map | ✅ Done | Leaflet map with 192 blocks, color-coded by category |
+| Rule-Based AI Chat | ✅ Done | 9+ intents, Hindi/English/Hinglish, evidence citations |
+| LLM AI Chat (Ollama) | ✅ Done | RAG pipeline, 33-doc knowledge base, pure Hindi/English |
+| Trend Analytics | ✅ Done | Multi-year extraction/recharge/stage charts |
+| Risk Scoring | ✅ Done | AI-derived 0-100 risk scores per state |
+| Learning Center | ✅ Done | Bilingual educational content |
+| Editorial Hero | ✅ Done | Bebas Neue typography, metadata bar |
+| Data Coverage | ✅ Done | 914 records, 36 states, 285 districts |
+
+### Phase 11: Enhanced LLM Features (In Progress)
+- [ ] Streaming responses for real-time text display
+- [ ] Conversation memory (multi-turn context)
+- [ ] Auto-detect language from user input
+- [ ] Voice input support (Web Speech API)
+- [ ] Export chat history as PDF/Markdown
+
+### Phase 12: Advanced Analytics
+- [ ] Predictive modeling — forecast extraction trends 5 years ahead
+- [ ] Anomaly detection — flag unusual extraction spikes
+- [ ] District-level heatmaps with drill-down
+- [ ] Water budget calculator — input area, get recharge/extraction estimates
+- [ ] Satellite data integration (NASA GRACE groundwater storage)
+
+### Phase 13: User Features
+- [ ] User authentication (JWT-based)
+- [ ] Saved queries and bookmarks
+- [ ] Custom dashboards — pin favorite states/districts
+- [ ] Alert system — email/SMS when extraction crosses threshold
+- [ ] Compare tool — side-by-side state comparison
+
+### Phase 14: Data Expansion
+- [ ] Real-time CGWB data sync (webhook/API polling)
+- [ ] Water quality data integration (fluoride, arsenic, nitrate levels)
+- [ ] Rainfall data integration (IMD records)
+- [ ] Crop water requirement data (CGWB crop coefficient tables)
+- [ ] Borewell registration data (state-level)
+
+### Phase 15: Mobile & Deployment
+- [ ] Progressive Web App (PWA) with offline support
+- [ ] React Native mobile app
+- [ ] Docker containerization
+- [ ] Cloud deployment (AWS/GCP)
+- [ ] Public API for third-party integrations
+
 ---
 
 ## Testing
