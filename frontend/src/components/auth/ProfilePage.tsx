@@ -22,41 +22,19 @@ export default function ProfilePage() {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    if (user) {
-      fetchProfile();
-    }
+    if (user) fetchProfile();
   }, [user]);
 
   const fetchProfile = async () => {
     if (!user) return;
-    const { data, error } = await supabase
+    const { data } = await supabase
       .from("profiles")
       .select("*")
       .eq("auth_user_id", user.id)
       .single();
-
     if (data) {
       setProfile(data);
       setFullName(data.full_name || "");
-    } else if (error && error.code === "PGRST116") {
-      // Profile doesn't exist, create it
-      const newProfile = {
-        auth_user_id: user.id,
-        full_name: user.user_metadata?.full_name || user.user_metadata?.name || "",
-        email: user.email || "",
-        phone: user.phone || "",
-        avatar_url: user.user_metadata?.avatar_url || "",
-        role: "user",
-      };
-      const { data: created } = await supabase
-        .from("profiles")
-        .insert(newProfile)
-        .select()
-        .single();
-      if (created) {
-        setProfile(created);
-        setFullName(created.full_name || "");
-      }
     }
   };
 

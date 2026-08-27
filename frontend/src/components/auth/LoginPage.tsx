@@ -1,16 +1,24 @@
 import { useState } from "react";
 import { useAuth } from "./AuthContext";
+import { supabase } from "../../lib/supabase";
 
-type AuthView = "login" | "otp-sent" | "otp-verify";
+type AuthView = "login" | "otp-sent" | "profile-complete";
 
 export default function LoginPage() {
-  const { signInWithGoogle, signInWithOtp, verifyOtp } = useAuth();
+  const { signInWithGoogle, signInWithOtp, verifyOtp, user } = useAuth();
   const [view, setView] = useState<AuthView>("login");
   const [phone, setPhone] = useState("");
   const [otp, setOtp] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [countdown, setCountdown] = useState(0);
+
+  // Profile completion fields
+  const [fullName, setFullName] = useState(user?.user_metadata?.full_name || user?.user_metadata?.name || "");
+  const [profileEmail, setProfileEmail] = useState(user?.email || "");
+  const [profilePhone, setProfilePhone] = useState(user?.phone || "");
+  const [profileSaving, setProfileSaving] = useState(false);
+  const [profileSaved, setProfileSaved] = useState(false);
 
   const validateIndianPhone = (p: string): boolean => {
     const cleaned = p.replace(/\D/g, "");
@@ -31,8 +39,8 @@ export default function LoginPage() {
     setLoading(true);
     try {
       await signInWithGoogle();
-    } catch (e: any) {
-      setError(e.message || "Google sign-in failed");
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Google sign-in failed");
       setLoading(false);
     }
   };
@@ -96,6 +104,38 @@ export default function LoginPage() {
     }, 1000);
   };
 
+  const handleSaveProfile = async () => {
+    if (!user) return;
+    if (!fullName.trim()) {
+      setError("Please enter your name");
+      return;
+    }
+    setProfileSaving(true);
+    setError("");
+
+    const { error: upsertError } = await supabase
+      .from("profiles")
+      .upsert(
+        {
+          auth_user_id: user.id,
+          full_name: fullName.trim(),
+          email: profileEmail.trim(),
+          phone: profilePhone.trim(),
+          avatar_url: user.user_metadata?.avatar_url || "",
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "auth_user_id" }
+      );
+
+    setProfileSaving(false);
+    if (upsertError) {
+      setError(upsertError.message);
+    } else {
+      setProfileSaved(true);
+      setTimeout(() => window.location.reload(), 800);
+    }
+  };
+
   return (
     <div className="auth-page">
       <div className="auth-card">
@@ -120,13 +160,14 @@ export default function LoginPage() {
             <span className="auth-title-hi">जल</span>
             <span className="auth-title-en">DRISTHI</span>
           </h1>
-          <p className="auth-tagline">Groundwater Intelligence for a Sustainable India</p>
+          <div className="auth-tagline">जल संरक्षण • जल संवर्धन • जल समृद्धि</div>
+          <div className="auth-sub-tagline">Groundwater Intelligence for a Sustainable India</div>
         </div>
 
         {view === "login" && (
           <div className="auth-form">
-            <h2 className="auth-form-title">Sign In</h2>
-            <p className="auth-form-sub">Access groundwater intelligence platform</p>
+            <h2 className="auth-form-title">Welcome</h2>
+            <p className="auth-form-sub">Sign in to access groundwater intelligence</p>
 
             <button
               className="auth-btn auth-btn-google"
@@ -178,6 +219,11 @@ export default function LoginPage() {
 
         {view === "otp-sent" && (
           <div className="auth-form">
+            <div className="auth-step-indicator">
+              <div className="auth-step-dot done" />
+              <div className="auth-step-dot active" />
+              <div className="auth-step-dot" />
+            </div>
             <h2 className="auth-form-title">Enter OTP</h2>
             <p className="auth-form-sub">
               6-digit code sent to +91 {phone}
@@ -229,6 +275,62 @@ export default function LoginPage() {
                 Change Number
               </button>
             </div>
+
+            {error && <div className="auth-error">{error}</div>}
+          </div>
+        )}
+
+        {view === "profile-complete" && (
+          <div className="auth-form">
+            <div className="auth-step-indicator">
+              <div className="auth-step-dot done" />
+              <div className="auth-step-dot done" />
+              <div className="auth-step-dot active" />
+            </div>
+            <h2 className="auth-form-title">Complete Your Profile</h2>
+            <p className="auth-form-sub">Tell us a bit about yourself</p>
+
+            <div className="auth-field-group">
+              <label className="auth-label">Full Name *</label>
+              <input
+                type="text"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                placeholder="Enter your full name"
+                className="auth-text-input"
+                autoFocus
+              />
+            </div>
+
+            <div className="auth-field-group">
+              <label className="auth-label">Email</label>
+              <input
+                type="email"
+                value={profileEmail}
+                onChange={(e) => setProfileEmail(e.target.value)}
+                placeholder="your@email.com"
+                className="auth-text-input"
+              />
+            </div>
+
+            <div className="auth-field-group">
+              <label className="auth-label">Mobile Number</label>
+              <input
+                type="tel"
+                value={profilePhone}
+                onChange={(e) => setProfilePhone(e.target.value)}
+                placeholder="+91 9876543210"
+                className="auth-text-input"
+              />
+            </div>
+
+            <button
+              className="auth-btn auth-btn-success"
+              onClick={handleSaveProfile}
+              disabled={profileSaving || !fullName.trim()}
+            >
+              {profileSaving ? "Saving..." : profileSaved ? "Redirecting..." : "Continue to Dashboard"}
+            </button>
 
             {error && <div className="auth-error">{error}</div>}
           </div>
