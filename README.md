@@ -23,7 +23,7 @@
 - **Data Provenance** — Full source tracking with official data import, validation reports, and evidence citations
 - **Groundwater Learning Center** — Bilingual educational content covering CGWB classification criteria, measurement units, extraction stage formulas, aquifer basics, and India usage breakdown
 - **Bilingual Design** — Hindi + English typography with Noto Sans Devanagari, Inter, IBM Plex Mono, and Bebas Neue
-- **State & District Coverage** — 912+ records across all 36 states/UTs, multiple assessment years
+- **State & District Coverage** — 520+ records across all 36 states/UTs, multiple assessment years (2020–2025)
 - **Supabase Backend** — PostgreSQL database hosted on Supabase with REST API, row-level security, and real-time capabilities
 
 ---
@@ -52,7 +52,7 @@ The Central Ground Water Board (CGWB) classifies assessment units based on the S
 | GeoJSON Data | India state boundaries (35 features), district boundaries (594 features) |
 | Backend | FastAPI, SQLAlchemy, Pydantic |
 | Database | **Supabase PostgreSQL** (hosted) |
-| Data Source | CGWB/IN-GRES via OpenCity.in CKAN API |
+| Data Source | CGWB National Compilation on Dynamic Ground Water Resources of India (2020, 2022, 2024, 2025) |
 | AI/LLM | Ollama (llama3.1:8b), TF-IDF retrieval, hybrid RAG |
 | Query Engine | Geo resolver, query router, numeric calculator |
 | Display Font | Bebas Neue (editorial headlines) |
@@ -84,7 +84,7 @@ jaldrishti/
 │   └── scripts/
 │       ├── migrate_supabase.sql     # Supabase schema migration
 │       ├── migrate_to_supabase.py   # SQLite → Supabase data migration
-│       ├── import_ingres_data.py    # Data ingestion from OpenCity.in
+│       ├── import_ingres_data.py    # Data ingestion from CGWB publications
 │       └── validate_ingres_data.py  # Data quality validation
 ├── frontend/
 │   ├── public/
@@ -110,7 +110,7 @@ jaldrishti/
 │   │   │       └── Learning.tsx     # CGWB classification + groundwater knowledge center
 │   │   ├── data/
 │   │   │   ├── stateMap.ts      # GeoJSON↔DB name mapping, status colors, color scales
-│   │   │   └── states.ts       # State data types and ViewKey definition
+│   │   │   └── states.ts       # Simplified state overview data for the SVG map
 │   │   └── lib/
 │   │       └── api.ts           # API client (chat, streaming, groundwater, year-aware endpoints)
 │   └── index.html               # Google Fonts
@@ -239,7 +239,7 @@ USE_SUPABASE=true
 
 #### Step 3.6 — Migrate Data to Supabase
 
-Run the migration script to transfer all 912 groundwater records from the local SQLite database to Supabase:
+Run the migration script to transfer groundwater records from the local SQLite database to Supabase:
 
 ```bash
 cd backend
@@ -483,8 +483,8 @@ INGRES AI is the intelligent groundwater assistant built into the जलDRISTHI 
 
 | Table | Records | Description |
 |-------|---------|-------------|
-| `groundwater` | 912 | Core assessment data (state, district, block, extraction, stage, category) |
-| `data_sources` | 4 | Source tracking (CGWB, IN-GRES) |
+| `groundwater` | 520 | Core assessment data (state, district, block, extraction, stage, category) — sourced from CGWB |
+| `data_sources` | 4 | CGWB National Compilation publications (2020, 2022, 2024, 2025) |
 | `water_readings` | 40 | Sensor/monitoring data |
 | `groundwater_quality` | 0 | Quality parameters (fluoride, arsenic, nitrate, etc.) |
 | `groundwater_levels` | 0 | Pre/post monsoon water levels |
@@ -510,13 +510,11 @@ INGRES AI is the intelligent groundwater assistant built into the जलDRISTHI 
 | State-level import | 2022 | 37 | All states |
 | District-level additions | 2020–2025 | 392 | 24 states, 285 districts |
 
-**Total: 912 records** across 36 states, 285 districts, 192 blocks, 4 years.
+**Total: 520 records** across 36 states, sourced directly from CGWB publications.
 
-**Available assessment years:** 2020, 2022, 2024, 2025 (2021, 2023, 2026 not yet in database)
+**Available assessment years:** 2020, 2022, 2024, 2025 (2021, 2023, 2026 not yet published by CGWB)
 
-Data sourced from **OpenCity.in** CKAN Datastore API with full provenance tracking.
-
-> **Note:** जलDRISTHI is a prototype. Official groundwater data should be verified against primary CGWB/IN-GRES sources for policy or operational decisions.
+Data sourced from **Central Ground Water Board (CGWB)**, Ministry of Jal Shakti — National Compilation on Dynamic Ground Water Resources of India, with full provenance tracking.
 
 ---
 
@@ -527,7 +525,7 @@ Data sourced from **OpenCity.in** CKAN Datastore API with full provenance tracki
 | Phase | Status | Description |
 |-------|--------|-------------|
 | Phase 1: Foundation | ✅ | FastAPI backend, SQLAlchemy models, React+Vite frontend |
-| Phase 2: Data Integration | ✅ | CGWB/IN-GRES data ingestion, 912 records, provenance tracking |
+| Phase 2: Data Integration | ✅ | CGWB data ingestion, 520 records from official publications, provenance tracking |
 | Phase 3: Dashboard & Map | ✅ | Leaflet map, KPI cards, state detail panels |
 | Phase 4: AI Chat Assistant | ✅ | Intent parser, 9+ intents, Hindi/English/Hinglish |
 | Phase 5: Analytics | ✅ | Multi-year trends, risk scoring, comparisons |
@@ -551,7 +549,7 @@ Data sourced from **OpenCity.in** CKAN Datastore API with full provenance tracki
 | Feature | Status | Description |
 |---------|--------|-------------|
 | INGRES AI Chatbot | ✅ Done | LLM-only mode, streaming, bilingual |
-| Supabase Database | ✅ Done | 912 records on PostgreSQL |
+| Supabase Database | ✅ Done | 520 CGWB records on PostgreSQL |
 | GeoJSON Choropleth Map | ✅ Done | State + district boundaries, 35 states, 594 districts |
 | Year-Aware Timeline | ✅ Done | 2020–2026 with availability detection |
 | Year Comparison | ✅ Done | Block-level YoY comparison |

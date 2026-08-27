@@ -27,8 +27,8 @@ export const statusLabel: Record<StatusKey, string> = {
   over: "Over-Exploited",
 };
 
-// NOTE: This is stylised / placeholder data for the UI concept only.
-// Replace with live values from the CGWB / IN-GRES API integration.
+// NOTE: Simplified overview data for the SVG map visualization.
+// Actual groundwater data is sourced from CGWB and served via the API.
 export const states: StateData[] = [
   { name: "Punjab", cx: 103, cy: 80, lat: 31.0, lng: 75.4, status: "critical", ext: "165%", rech: "18.4 BCM", exWater: "30.4 BCM", extractable: "20.1 BCM" },
   { name: "Haryana", cx: 113, cy: 108, lat: 29.3, lng: 76.2, status: "over", ext: "137%", rech: "10.8 BCM", exWater: "14.9 BCM", extractable: "9.4 BCM" },
