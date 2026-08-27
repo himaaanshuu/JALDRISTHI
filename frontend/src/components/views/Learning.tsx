@@ -248,19 +248,173 @@ export default function Learning() {
             </article>
           ))}
         </div>
+      </div>
+
+      <div className="learn-section">
+        <div className="learn-header">
+          <div className="eyebrow" style={{ marginBottom: 8 }}>CGWB Classification · वर्गीकरण मापदंड</div>
+          <h2 className="learn-title">Groundwater Category Criteria</h2>
+          <p className="learn-sub">
+            The Central Ground Water Board (CGWB) classifies assessment units into four categories
+            based on the Stage of Groundwater Extraction (SGE). These classifications guide
+            policy decisions for groundwater management across India.
+          </p>
+          <p className="learn-sub-hindi">
+            केंद्रीय भूजल बोर्ड (CGWB) भूजल निष्कर्षण चरण (SGE) के आधार पर मूल्यांकन इकाइयों को चार श्रेणियों में वर्गीकृत करता है।
+          </p>
+        </div>
+        <div className="learn-category-grid">
+          <article className="learn-category-card safe">
+            <div className="learn-category-header">
+              <div className="learn-category-icon">✓</div>
+              <div>
+                <h3 className="learn-category-name">Safe</h3>
+                <span className="learn-category-hindi">सुरक्षित</span>
+              </div>
+              <div className="learn-category-threshold">SGE &lt; 70%</div>
+            </div>
+            <div className="learn-category-body">
+              <div className="learn-category-condition">
+                <span className="condition-label">Condition:</span>
+                Stage of Groundwater Extraction is less than 70%
+              </div>
+              <div className="learn-category-condition-hindi">
+                <span className="condition-label">शर्त:</span>
+                भूजल निष्कर्षण का चरण 70% से कम है
+              </div>
+              <p className="learn-category-desc">
+                Groundwater extraction is within sustainable limits. Water tables are stable or
+                rising, and current extraction patterns can be maintained for decades without
+                significant depletion.
+              </p>
+              <p className="learn-category-desc-hindi">
+                भूजल निष्कर्षण टिकाऊ सीमाओं के भीतर है। जल स्तर स्थिर या बढ़ रहा है।
+              </p>
+              <div className="learn-category-action">
+                <span className="action-label">Management Action:</span>
+                Monitor and maintain. No immediate restrictions needed.
+              </div>
+            </div>
+          </article>
+
+          <article className="learn-category-card semi">
+            <div className="learn-category-header">
+              <div className="learn-category-icon">⚠</div>
+              <div>
+                <h3 className="learn-category-name">Semi-Critical</h3>
+                <span className="learn-category-hindi">अर्ध-गंभीर</span>
+              </div>
+              <div className="learn-category-threshold">70% ≤ SGE &lt; 90%</div>
+            </div>
+            <div className="learn-category-body">
+              <div className="learn-category-condition">
+                <span className="condition-label">Condition:</span>
+                Stage of Groundwater Extraction is between 70% and 90%
+              </div>
+              <div className="learn-category-condition-hindi">
+                <span className="condition-label">शर्त:</span>
+                भूजल निष्कर्षण का चरण 70% और 90% के बीच है
+              </div>
+              <p className="learn-category-desc">
+                Extraction is approaching the limit of sustainable use. Water tables may show
+                seasonal stress. Without intervention, these areas risk transitioning to
+                Critical or Over-Exploited status within 5–10 years.
+              </p>
+              <p className="learn-category-desc-hindi">
+                निष्कर्षण टिकाऊ उपयोग की सीमा के करीब पहुंच रहा है। हस्तक्षेप के बिना, ये क्षेत्र 5-10 वर्षों में गंभीर श्रेणी में बदल सकते हैं।
+              </p>
+              <div className="learn-category-action">
+                <span className="action-label">Management Action:</span>
+                Regulate new well drilling. Promote water-efficient irrigation. Implement managed aquifer recharge.
+              </div>
+            </div>
+          </article>
+
+          <article className="learn-category-card crit">
+            <div className="learn-category-header">
+              <div className="learn-category-icon">!</div>
+              <div>
+                <h3 className="learn-category-name">Critical</h3>
+                <span className="learn-category-hindi">गंभीर</span>
+              </div>
+              <div className="learn-category-threshold">90% ≤ SGE &lt; 100%</div>
+            </div>
+            <div className="learn-category-body">
+              <div className="learn-category-condition">
+                <span className="condition-label">Condition:</span>
+                Stage of Groundwater Extraction is between 90% and 100%
+              </div>
+              <div className="learn-category-condition-hindi">
+                <span className="condition-label">शर्त:</span>
+                भूजल निष्कर्षण का चरण 90% और 100% के बीच है
+              </div>
+              <p className="learn-category-desc">
+                Extraction is nearly equal to or exceeding recharge. Declining water levels,
+                drying borewells, and reduced well yields are common. Immediate intervention
+                is required to prevent permanent aquifer damage.
+              </p>
+              <p className="learn-category-desc-hindi">
+                निष्कर्षण पुनर्भरण के लगभग बराबर है। जल स्तर में गिरावट, सूखे बोरवेल और कम उपज आम है।
+              </p>
+              <div className="learn-category-action">
+                <span className="action-label">Management Action:</span>
+                Ban new extraction points. Enforce water pricing. Strict regulation of existing wells.
+              </div>
+            </div>
+          </article>
+
+          <article className="learn-category-card over">
+            <div className="learn-category-header">
+              <div className="learn-category-icon">✕</div>
+              <div>
+                <h3 className="learn-category-name">Over-Exploited</h3>
+                <span className="learn-category-hindi">अत्यधिक दोहन</span>
+              </div>
+              <div className="learn-category-threshold">SGE ≥ 100%</div>
+            </div>
+            <div className="learn-category-body">
+              <div className="learn-category-condition">
+                <span className="condition-label">Condition:</span>
+                Stage of Groundwater Extraction is 100% or more
+              </div>
+              <div className="learn-category-condition-hindi">
+                <span className="condition-label">शर्त:</span>
+                भूजल निष्कर्षण का चरण 100% या उससे अधिक है
+              </div>
+              <p className="learn-category-desc">
+                More groundwater is being extracted than naturally replenished. This leads to
+                continuous water table decline, land subsidence, and saltwater intrusion in
+                coastal areas. These regions face severe water security threats.
+              </p>
+              <p className="learn-category-desc-hindi">
+                प्राकृतिक रूप से पुनर्भरित होने से अधिक भूजल निकाला जा रहा है। इससे जल स्तर में लगातार गिरावट होती है।
+              </p>
+              <div className="learn-category-action">
+                <span className="action-label">Management Action:</span>
+                Emergency measures. Cross-subsidy water pricing. Strict enforcement. Alternative water sources.
+              </div>
+            </div>
+          </article>
+        </div>
+
         <article className="learn-formula-card">
           <div className="learn-formula-title">Stage of Extraction Formula</div>
           <div className="learn-formula-hindi">निष्कर्षण चरण सूत्र</div>
           <div className="learn-formula-expr">
-            Stage (%) = (Groundwater Extraction / Net Availability) × 100
+            SGE (%) = (Net Groundwater Extraction / Net Groundwater Availability) × 100
           </div>
           <div className="learn-formula-expr-hindi">
-            चरण (%) = (भूजल निष्कर्षण / शुद्ध उपलब्धता) × 100
+            SGE (%) = (शुद्ध भूजल निष्कर्षण / शुद्ध भूजल उपलब्धता) × 100
+          </div>
+          <div className="learn-formula-note">
+            <strong>Net Groundwater Availability</strong> = Total Annual Recharge – Natural Discharges
+            <br />
+            <strong>Net Extraction</strong> = Total Extraction – Injection Wells – Return Flow from Irrigation
           </div>
           <div className="learn-formula-ranges">
             <div className="learn-formula-range safe">
               <span className="range-label">Safe</span>
-              <span className="range-val">≤ 70%</span>
+              <span className="range-val">&lt; 70%</span>
               <span className="range-hindi">सुरक्षित</span>
             </div>
             <div className="learn-formula-range semi">

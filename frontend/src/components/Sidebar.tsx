@@ -25,7 +25,7 @@ const navEntries: NavEntry[] = [
   },
   {
     key: "assistant",
-    label: "Jaladhi",
+    label: "INGRES AI",
     hindi: "जलाधि",
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6}>
@@ -130,11 +130,11 @@ export default function Sidebar({ active, onNavigate, open }: SidebarProps) {
             </svg>
           </span>
           <div className="brand-name-block">
-            <span className="brand-hindi">जलदृष्टि</span>
+            <span className="brand-hindi">जल</span>
             <span className="brand-english">DRISTI</span>
           </div>
         </div>
-        <div className="brand-sub">Groundwater Intelligence</div>
+        <div className="brand-sub">INGRES AI Chatbot</div>
       </div>
 
       <nav className="nav">

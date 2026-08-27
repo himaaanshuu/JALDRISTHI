@@ -127,15 +127,14 @@ export default function Overview() {
           CGWB · IN-GRES · National Assessment {coverage?.assessment_years.at(-1) ?? 2025}
         </div>
         <h1 className="hero-title">
-          India
-          <span className="hero-title-line2">Groundwater</span>
+          <span className="brand-hindi">जल</span>
+          <span className="hero-title-line2">DRISTI</span>
         </h1>
         <p className="hero-sub">
-          Explore groundwater through AI, spatial intelligence and historical analysis
-          across {assessmentUnits || 0} assessment units.
+          INGRES AI-powered groundwater intelligence platform for India
         </p>
         <p className="hero-sub-hindi">
-          भारत की भूजल स्थिति का कृत्रिम बुद्धिमत्ता, स्थानिक विश्लेषण और ऐतिहासिक डेटा के माध्यम से अन्वेषण।
+          भारत के लिए INGRES AI संचालित भूजल बुद्धिमत्ता मंच। AI, स्थानिक विश्लेषण और ऐतिहासिक डेटा के माध्यम से भूजल का अन्वेषण करें।
         </p>
         <div className="hero-meta">
           <div className="hero-meta-item">
