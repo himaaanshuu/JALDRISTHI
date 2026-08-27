@@ -151,7 +151,7 @@
 .brand-name-block {
   display: flex;
   align-items: baseline;
-  gap: 6px;
+  gap: 0;
 }
 
 .brand-hindi {
@@ -614,7 +614,7 @@
   margin-bottom: var(--sp-5);
   display: flex;
   align-items: baseline;
-  gap: 16px;
+  gap: 0;
 }
 
 .hero-title .brand-hindi {
