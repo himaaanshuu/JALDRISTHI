@@ -88,13 +88,13 @@ export default function Topbar({ onMenuClick, onNavigate }: TopbarProps) {
       <button
         className="topbar-ai-btn"
         onClick={() => onNavigate?.("assistant")}
-        title="Open AI Assistant"
+        title="Open Jaladhi AI"
       >
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} width="16" height="16">
-          <path d="M4 5h16v11H8l-4 4V5Z" />
-          <path d="M8 9h8M8 12.5h5" />
+          <path d="M12 2a7 7 0 017 7c0 3-2 5.5-4 7.5L12 20l-3-3.5C7 14.5 5 12 5 9a7 7 0 017-7z" />
+          <circle cx="12" cy="9" r="2.5" />
         </svg>
-        <span>AI Assistant</span>
+        <span>Jaladhi</span>
       </button>
 
       <div className="lang-toggle">

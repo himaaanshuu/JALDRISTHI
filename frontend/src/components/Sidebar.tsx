@@ -25,12 +25,12 @@ const navEntries: NavEntry[] = [
   },
   {
     key: "assistant",
-    label: "AI Assistant",
-    hindi: "AI सहायक",
+    label: "Jaladhi",
+    hindi: "जलाधि",
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6}>
-        <path d="M4 5h16v11H8l-4 4V5Z" />
-        <path d="M8 9h8M8 12.5h5" />
+        <path d="M12 2a7 7 0 017 7c0 3-2 5.5-4 7.5L12 20l-3-3.5C7 14.5 5 12 5 9a7 7 0 017-7z" />
+        <circle cx="12" cy="9" r="2.5" />
       </svg>
     ),
   },

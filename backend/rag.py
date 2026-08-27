@@ -181,15 +181,49 @@ class RAGEngine:
         self.vectorizer = TfidfVectorizer(max_features=3000, stop_words="english", ngram_range=(1, 2), sublinear_tf=True)
         self.tfidf_matrix = self.vectorizer.fit_transform(corpus)
 
-    def retrieve(self, query: str, top_k: int = 3):
+    def retrieve(self, query: str, top_k: int = 5):
+        # TF-IDF retrieval
         qv = self.vectorizer.transform([query])
-        scores = cosine_similarity(qv, self.tfidf_matrix).flatten()
-        top = scores.argsort()[-top_k:][::-1]
+        tfidf_scores = cosine_similarity(qv, self.tfidf_matrix).flatten()
+
+        # Keyword fallback: boost docs whose topic/content match query words
+        query_words = set(query.lower().split())
+
+        # Hindi keyword mapping
+        hi_map = {
+            "भूजल": "groundwater", "संकट": "crisis", "कारण": "causes", "निकासी": "extraction",
+            "रिचार्ज": "recharge", "स्थिति": "status", "जिला": "district", "राज्य": "state",
+            "ब्लॉक": "block", "श्रेणी": "category", "सुरक्षित": "safe", "गंभीर": "critical",
+            "अत्यधिक": "over", "दोहन": "exploited", "प्रवृत्ति": "trend", "तुलना": "compare",
+            "जलस्तर": "water level", "संदूषण": "contamination", "फ्लोराइड": "fluoride",
+            "आर्सेनिक": "arsenic", "नीति": "policy", "योजना": "scheme", "सिंचाई": "irrigation",
+            "कृषि": "agriculture", "मानसून": "monsoon", "वर्षा": "rainfall", "जल": "water",
+            "भूमि": "land", "पानी": "water", "कुआं": "well", "ट्यूबवेल": "tube well",
+            "अक्विफर": "aquifer", "प्रकार": "types", "प्रबंधन": "management", "संरक्षण": "conservation",
+            "समस्या": "problem", "समाधान": "solution", "सरकार": "government", "मंत्रालय": "ministry",
+        }
+
+        # Translate Hindi words to English for matching
+        expanded_words = set(query_words)
+        for hi, en in hi_map.items():
+            if hi in query.lower():
+                expanded_words.add(en)
+
+        keyword_scores = []
+        for doc in self.documents:
+            doc_text = (doc["topic"] + " " + doc["content"]).lower()
+            matches = sum(1 for w in expanded_words if w in doc_text)
+            keyword_scores.append(matches / max(len(expanded_words), 1))
+        keyword_scores = [s * 0.3 for s in keyword_scores]
+
+        # Combine scores
+        combined = tfidf_scores + keyword_scores
+        top = combined.argsort()[-top_k:][::-1]
         results = []
         for i in top:
-            if scores[i] > 0.01:
+            if combined[i] > 0.0:
                 doc = self.documents[i].copy()
-                doc["relevance_score"] = round(float(scores[i]), 3)
+                doc["relevance_score"] = round(float(combined[i]), 3)
                 results.append(doc)
         return results
 
@@ -215,7 +249,7 @@ class RAGEngine:
         conn.close()
         return "\n\n".join(parts)
 
-    def generate(self, query: str, top_k: int = 3, language: str = "english") -> Dict:
+    def generate(self, query: str, top_k: int = 5, language: str = "english") -> Dict:
         retrieved = self.retrieve(query, top_k=top_k)
         context = "\n".join(f"[{d['topic']}] {d['content']}" for d in retrieved)
         db_ctx = self._query_db(query)

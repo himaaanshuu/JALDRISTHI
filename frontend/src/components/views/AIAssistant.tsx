@@ -1,22 +1,16 @@
 import { useState, useRef, useEffect, type FormEvent } from "react";
 import {
-  sendChatMessage,
   sendLLMChatMessage,
   checkLLMHealth,
-  type ChatApiResponse,
   type LLMChatApiResponse,
   type LLMHealthResponse,
 } from "../../lib/api";
-
-type ChatMode = "rule" | "llm";
 
 interface Message {
   id: string;
   role: "user" | "ai";
   content: string;
-  data?: ChatApiResponse;
   llmData?: LLMChatApiResponse;
-  mode: ChatMode;
   timestamp: Date;
 }
 
@@ -43,13 +37,6 @@ const llmSuggestedQueries = [
 ];
 
 const quickActions = [
-  { label: "Status", query: "What is the groundwater status of India?" },
-  { label: "Critical", query: "Show critical and over-exploited areas." },
-  { label: "Compare", query: "Compare extraction between 2020 and 2024." },
-  { label: "Trend", query: "What is the extraction trend?" },
-];
-
-const llmQuickActions = [
   { label: "Depletion", query: "Why is groundwater depleting in India?" },
   { label: "Solutions", query: "What solutions exist for groundwater problems?" },
   { label: "Contamination", query: "What are the main groundwater contamination issues?" },
@@ -75,7 +62,6 @@ export default function AIAssistant() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-  const [chatMode, setChatMode] = useState<ChatMode>("rule");
   const [llmHealth, setLlmHealth] = useState<LLMHealthResponse | null>(null);
   const [language, setLanguage] = useState<"english" | "hindi">("english");
   const threadRef = useRef<HTMLDivElement>(null);
@@ -108,7 +94,6 @@ export default function AIAssistant() {
       id: nextId(),
       role: "user",
       content: text,
-      mode: chatMode,
       timestamp: new Date(),
     };
     setMessages((prev) => [...prev, userMsg]);
@@ -116,35 +101,30 @@ export default function AIAssistant() {
     setLoading(true);
 
     try {
-      if (chatMode === "llm" && isLLMAvailable) {
+      if (isLLMAvailable) {
         const llmData = await sendLLMChatMessage(text, 5, language);
         const aiMsg: Message = {
           id: nextId(),
           role: "ai",
           content: llmData.reply,
           llmData,
-          mode: "llm",
           timestamp: new Date(),
         };
         setMessages((prev) => [...prev, aiMsg]);
       } else {
-        const data = await sendChatMessage(text);
-        const aiMsg: Message = {
+        const errMsg: Message = {
           id: nextId(),
           role: "ai",
-          content: data.reply,
-          data,
-          mode: "rule",
+          content: "Ollama is not running. Please start Ollama and refresh the page.",
           timestamp: new Date(),
         };
-        setMessages((prev) => [...prev, aiMsg]);
+        setMessages((prev) => [...prev, errMsg]);
       }
     } catch {
       const errMsg: Message = {
         id: nextId(),
         role: "ai",
         content: "Sorry, I encountered an error processing your request. Please try again.",
-        mode: chatMode,
         timestamp: new Date(),
       };
       setMessages((prev) => [...prev, errMsg]);
@@ -153,9 +133,6 @@ export default function AIAssistant() {
       inputRef.current?.focus();
     }
   }
-
-  const currentSuggestions = chatMode === "llm" ? llmSuggestedQueries : suggestedQueries;
-  const currentQuickActions = chatMode === "llm" ? llmQuickActions : quickActions;
 
   return (
     <section className="view active">
@@ -195,7 +172,7 @@ export default function AIAssistant() {
             <div className="col-title" style={{ marginTop: 18 }}>
               Quick Actions
             </div>
-            {currentQuickActions.map((a) => (
+            {quickActions.map((a) => (
               <div
                 className="topic-item"
                 key={a.label}
@@ -208,33 +185,17 @@ export default function AIAssistant() {
         </div>
 
         <div className="assist-center">
-          {/* Mode Toggle */}
-          <div className="mode-toggle-bar">
-            <button
-              className={`mode-btn ${chatMode === "rule" ? "active" : ""}`}
-              onClick={() => setChatMode("rule")}
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} width="14" height="14">
-                <path d="M9 3H5a2 2 0 00-2 2v4m6-6h10a2 2 0 012 2v4M9 3v18m0 0h10a2 2 0 002-2V9M9 21H5a2 2 0 01-2-2V9m0 0h18" />
-              </svg>
-              Rule-Based
-            </button>
-            <button
-              className={`mode-btn ${chatMode === "llm" ? "active" : ""} ${!isLLMAvailable ? "disabled" : ""}`}
-              onClick={() => {
-                if (isLLMAvailable) setChatMode("llm");
-              }}
-              title={!isLLMAvailable ? "Ollama not available — start Ollama to enable LLM mode" : ""}
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} width="14" height="14">
+          {/* Top Bar */}
+          <div className="jaladhi-topbar">
+            <div className="jaladhi-brand">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} width="18" height="18">
                 <path d="M12 2a7 7 0 017 7c0 3-2 5.5-4 7.5L12 20l-3-3.5C7 14.5 5 12 5 9a7 7 0 017-7z" />
                 <circle cx="12" cy="9" r="2.5" />
               </svg>
-              LLM (Ollama)
-              {!isLLMAvailable && <span className="mode-badge-off">OFF</span>}
-              {isLLMAvailable && <span className="mode-badge-on">ON</span>}
-            </button>
-            {chatMode === "llm" && isLLMAvailable && (
+              <span className="jaladhi-name">Jaladhi</span>
+              <span className="jaladhi-badge">AI</span>
+            </div>
+            <div className="jaladhi-controls">
               <div className="lang-toggle">
                 <button
                   className={`lang-btn ${language === "english" ? "active" : ""}`}
@@ -249,7 +210,11 @@ export default function AIAssistant() {
                   हिंदी
                 </button>
               </div>
-            )}
+              <div className={`jaladhi-status ${isLLMAvailable ? "online" : "offline"}`}>
+                <span className="status-dot" />
+                {isLLMAvailable ? "Online" : "Offline"}
+              </div>
+            </div>
           </div>
 
           <div className="assist-thread" ref={threadRef}>
@@ -263,12 +228,11 @@ export default function AIAssistant() {
                 </div>
                 <h2 className="assist-welcome-title">जलदृष्टि DRISTI</h2>
                 <p className="assist-welcome-sub">
-                  {chatMode === "rule"
-                    ? "Ask me anything about India's groundwater data. I have access to official CGWB/IN-GRES assessments covering all 36 states, 285 districts, and 4 years of data."
-                    : "I'm powered by a local LLM with knowledge of India's groundwater problems. Ask about causes, solutions, policies, contamination, aquifer types, and more."}
+                  Ask me anything about India's groundwater. I have access to CGWB/IN-GRES data
+                  and domain knowledge covering all 36 states, 285 districts, and 4 years of assessments.
                 </p>
                 <div className="assist-welcome-chips">
-                  {currentSuggestions.slice(0, 4).map((q) => (
+                  {suggestedQueries.slice(0, 4).map((q) => (
                     <button
                       className="assist-welcome-chip"
                       key={q}
@@ -290,8 +254,7 @@ export default function AIAssistant() {
                 {msg.role === "ai" && (
                   <div className="ai-tag">
                     <span className="dot-live" />
-                    <span>जलदृष्टि DRISTI</span>
-                    {msg.mode === "llm" && <span className="ai-tag-llm">LLM</span>}
+                    <span>Jaladhi</span>
                   </div>
                 )}
                 <div className={msg.role === "user" ? "bubble" : "ai-card"}>
@@ -304,40 +267,11 @@ export default function AIAssistant() {
                         dangerouslySetInnerHTML={{ __html: renderMarkdown(msg.content) }}
                       />
 
-                      {msg.data?.evidence && (
-                        <div className="ai-evidence">
-                          <div className="ai-evidence-row">
-                            <span className="ai-evidence-label">Source</span>
-                            <span>{msg.data.evidence.source}</span>
-                          </div>
-                          <div className="ai-evidence-row">
-                            <span className="ai-evidence-label">Location</span>
-                            <span>{msg.data.evidence.location}</span>
-                          </div>
-                          <div className="ai-evidence-row">
-                            <span className="ai-evidence-label">Records</span>
-                            <span className="mono">{msg.data.evidence.records_used}</span>
-                          </div>
-                          <div className="ai-evidence-row">
-                            <span className="ai-evidence-label">Confidence</span>
-                            <span
-                              className={`confidence-${msg.data.evidence.confidence.toLowerCase()}`}
-                            >
-                              {msg.data.evidence.confidence}
-                            </span>
-                          </div>
-                        </div>
-                      )}
-
                       {msg.llmData?.sources && msg.llmData.sources.length > 0 && (
                         <div className="ai-evidence">
                           <div className="ai-evidence-row">
                             <span className="ai-evidence-label">Model</span>
                             <span className="mono">{msg.llmData.model}</span>
-                          </div>
-                          <div className="ai-evidence-row">
-                            <span className="ai-evidence-label">Mode</span>
-                            <span>LLM (RAG + Knowledge Base)</span>
                           </div>
                           <div className="ai-evidence-row">
                             <span className="ai-evidence-label">Sources</span>
@@ -346,22 +280,7 @@ export default function AIAssistant() {
                         </div>
                       )}
 
-                      {msg.data?.suggested_followups &&
-                        msg.data.suggested_followups.length > 0 && (
-                          <div className="ai-followups">
-                            {msg.data.suggested_followups.map((f) => (
-                              <button
-                                className="chip"
-                                key={f}
-                                onClick={(e) => handleSend(e, f)}
-                              >
-                                {f}
-                              </button>
-                            ))}
-                          </div>
-                        )}
-
-                      {msg.llmData && msg.mode === "llm" && (
+                      {msg.llmData && (
                         <div className="ai-followups">
                           {llmSuggestedQueries.slice(0, 3).map((f) => (
                             <button
@@ -384,15 +303,14 @@ export default function AIAssistant() {
               <div className="msg msg-ai">
                 <div className="ai-tag">
                   <span className="dot-live" />
-                  <span>जलदृष्टि DRISTI</span>
-                  {chatMode === "llm" && <span className="ai-tag-llm">LLM</span>}
+                  <span>Jaladhi</span>
                 </div>
                 <div className="ai-card">
                   <div className="ai-typing">
                     <span className="dot" />
                     <span className="dot" />
                     <span className="dot" />
-                    {chatMode === "llm" && <span className="ai-typing-label">Generating with LLM...</span>}
+                    <span className="ai-typing-label">Thinking...</span>
                   </div>
                 </div>
               </div>
@@ -404,11 +322,7 @@ export default function AIAssistant() {
               <input
                 ref={inputRef}
                 type="text"
-                placeholder={
-                  chatMode === "llm"
-                    ? "Ask about groundwater problems, solutions, policies..."
-                    : "Ask a follow-up about groundwater..."
-                }
+                placeholder="Ask Jaladhi about groundwater..."
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 disabled={loading}
@@ -425,7 +339,7 @@ export default function AIAssistant() {
         <div className="assist-col assist-right">
           <div className="assist-col-pad">
             <div className="col-title">Suggested Queries</div>
-            {currentSuggestions.map((q) => (
+            {suggestedQueries.map((q) => (
               <div
                 className="topic-item"
                 key={q}
@@ -458,29 +372,19 @@ export default function AIAssistant() {
               <span className="coverage-val mono">914</span>
             </div>
             <div className="col-title" style={{ marginTop: 18 }}>
-              LLM Status
+              Jaladhi Info
             </div>
             <div className="coverage-item">
               <span className="coverage-label">Model</span>
               <span className="coverage-val mono">llama3.1:8b</span>
             </div>
             <div className="coverage-item">
-              <span className="coverage-label">Status</span>
-              <span className={`coverage-val ${isLLMAvailable ? "status-ok" : "status-off"}`}>
-                {isLLMAvailable ? "Online" : "Offline"}
-              </span>
+              <span className="coverage-label">Knowledge</span>
+              <span className="coverage-val mono">33+ docs</span>
             </div>
             <div className="coverage-item">
-              <span className="coverage-label">KB Docs</span>
-              <span className="coverage-val mono">24+</span>
-            </div>
-            <div className="col-title" style={{ marginTop: 18 }}>
-              Source
-            </div>
-            <div className="coverage-source">
-              Central Ground Water Board (CGWB)
-              <br />
-              Ministry of Jal Shakti
+              <span className="coverage-label">Source</span>
+              <span className="coverage-val">CGWB / IN-GRES</span>
             </div>
           </div>
         </div>
