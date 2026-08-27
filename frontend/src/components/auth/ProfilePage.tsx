@@ -19,7 +19,10 @@ export default function ProfilePage() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [editing, setEditing] = useState(false);
   const [fullName, setFullName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
 
   useEffect(() => {
     if (user) fetchProfile();
@@ -35,19 +38,30 @@ export default function ProfilePage() {
     if (data) {
       setProfile(data);
       setFullName(data.full_name || "");
+      setEmail(data.email || "");
+      setPhone(data.phone || "");
     }
   };
 
   const handleSave = async () => {
     if (!profile) return;
     setSaving(true);
-    await supabase
+    const { error } = await supabase
       .from("profiles")
-      .update({ full_name: fullName, updated_at: new Date().toISOString() })
+      .update({
+        full_name: fullName.trim(),
+        email: email.trim(),
+        phone: phone.trim(),
+        updated_at: new Date().toISOString(),
+      })
       .eq("id", profile.id);
-    setProfile({ ...profile, full_name: fullName });
-    setEditing(false);
     setSaving(false);
+    if (!error) {
+      setProfile({ ...profile, full_name: fullName, email, phone });
+      setEditing(false);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    }
   };
 
   if (!user) return null;
@@ -70,7 +84,7 @@ export default function ProfilePage() {
           </div>
           <div className="profile-info">
             <h2>{profile?.full_name || "User"}</h2>
-            <p>{user.email || user.phone}</p>
+            <p>{profile?.email || user.email || user.phone}</p>
             <span className="profile-provider">
               Signed in with {provider === "google" ? "Google" : "Mobile OTP"}
             </span>
@@ -93,22 +107,50 @@ export default function ProfilePage() {
           </div>
           <div className="profile-field">
             <label>Email</label>
-            <span>{user.email || "Not available"}</span>
+            {editing ? (
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="profile-input"
+                placeholder="your@email.com"
+              />
+            ) : (
+              <span>{profile?.email || "Not set"}</span>
+            )}
           </div>
           <div className="profile-field">
-            <label>Phone</label>
-            <span>{user.phone || "Not available"}</span>
+            <label>Mobile Number</label>
+            {editing ? (
+              <input
+                type="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                className="profile-input"
+                placeholder="+91 9876543210"
+              />
+            ) : (
+              <span>{profile?.phone || "Not set"}</span>
+            )}
           </div>
           <div className="profile-field">
             <label>Role</label>
             <span className="profile-role">{profile?.role || "user"}</span>
+          </div>
+          <div className="profile-field">
+            <label>Member Since</label>
+            <span>{profile?.created_at ? new Date(profile.created_at).toLocaleDateString() : "N/A"}</span>
           </div>
         </div>
 
         <div className="profile-actions">
           {editing ? (
             <>
-              <button className="btn btn-primary" onClick={handleSave} disabled={saving}>
+              <button
+                className="btn btn-primary"
+                onClick={handleSave}
+                disabled={saving || !fullName.trim()}
+              >
                 {saving ? "Saving..." : "Save Changes"}
               </button>
               <button
@@ -116,6 +158,8 @@ export default function ProfilePage() {
                 onClick={() => {
                   setEditing(false);
                   setFullName(profile?.full_name || "");
+                  setEmail(profile?.email || "");
+                  setPhone(profile?.phone || "");
                 }}
               >
                 Cancel
@@ -130,6 +174,19 @@ export default function ProfilePage() {
             Sign Out
           </button>
         </div>
+
+        {saved && (
+          <div style={{
+            padding: "12px",
+            textAlign: "center",
+            color: "#27ae60",
+            fontFamily: "var(--font-ui)",
+            fontSize: 13,
+            borderTop: "1px solid rgba(255,255,255,0.06)",
+          }}>
+            Profile updated successfully
+          </div>
+        )}
       </div>
     </div>
   );

@@ -1,6 +1,7 @@
-import type { ReactNode } from "react";
+import { useState, useEffect, type ReactNode } from "react";
 import type { ViewKey } from "../data/states";
 import { useAuth } from "./auth/AuthContext";
+import { supabase } from "../lib/supabase";
 
 interface NavEntry {
   key: ViewKey;
@@ -123,7 +124,26 @@ interface SidebarProps {
 
 export default function Sidebar({ active, onNavigate, open }: SidebarProps) {
   const { user, signOut } = useAuth();
-  const displayName = user?.user_metadata?.full_name
+  const [profileName, setProfileName] = useState("");
+  const [profileRole, setProfileRole] = useState("user");
+
+  useEffect(() => {
+    if (user) {
+      const fetchProfile = async () => {
+        const { data } = await supabase
+          .from("profiles")
+          .select("full_name, role")
+          .eq("auth_user_id", user.id)
+          .single();
+        if (data?.full_name) setProfileName(data.full_name);
+        if (data?.role) setProfileRole(data.role);
+      };
+      fetchProfile();
+    }
+  }, [user]);
+
+  const displayName = profileName
+    || user?.user_metadata?.full_name
     || user?.user_metadata?.name
     || user?.email
     || user?.phone
@@ -209,7 +229,12 @@ export default function Sidebar({ active, onNavigate, open }: SidebarProps) {
 
       <div className="sidebar-foot">
         {user && (
-          <div className="sidebar-user">
+          <div
+            className="sidebar-user"
+            style={{ cursor: "pointer" }}
+            onClick={() => onNavigate("profile")}
+            title="Click to edit your profile"
+          >
             <div className="sidebar-user-avatar">
               {avatarUrl ? (
                 <img src={avatarUrl} alt="" />
@@ -219,11 +244,14 @@ export default function Sidebar({ active, onNavigate, open }: SidebarProps) {
             </div>
             <div className="sidebar-user-info">
               <span className="sidebar-user-name">{displayName}</span>
-              <span className="sidebar-user-role">{user.app_metadata?.role || "user"}</span>
+              <span className="sidebar-user-role">{profileRole}</span>
             </div>
             <button
               className="sidebar-user-btn"
-              onClick={signOut}
+              onClick={(e) => {
+                e.stopPropagation();
+                signOut();
+              }}
               title="Sign out"
             >
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6}>

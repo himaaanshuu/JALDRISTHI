@@ -60,4 +60,5 @@ export type ViewKey =
   | "reports"
   | "sources"
   | "learning"
-  | "quality";
+  | "quality"
+  | "profile";

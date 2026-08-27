@@ -43,6 +43,7 @@ function MainApp() {
         {view === "sources" && <DataSources />}
         {view === "learning" && <Learning />}
         {view === "quality" && <WaterQuality />}
+        {view === "profile" && <ProfilePage />}
       </main>
     </div>
   );
