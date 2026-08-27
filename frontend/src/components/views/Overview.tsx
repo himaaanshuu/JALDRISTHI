@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
-import IndiaLeafletMap from "../IndiaLeafletMap";
+import { useEffect, useState, useMemo } from "react";
+import IndiaLeafletMap, { GroundwaterRecord } from "../IndiaLeafletMap";
 import { fetchJson } from "../../lib/api";
-import { statusColor, statusLabel, type StateData } from "../../data/states";
+import { STATUS_COLORS } from "../../data/stateMap";
 
 interface StateSummary {
   state: string;
@@ -39,7 +39,7 @@ function formatNumber(n: number): string {
 }
 
 export default function Overview() {
-  const [selected, setSelected] = useState<StateData | null>(null);
+  const [selectedState, setSelectedState] = useState<string | null>(null);
   const [statesSummary, setStatesSummary] = useState<StateSummary[]>([]);
   const [coverage, setCoverage] = useState<CoverageSummary | null>(null);
 
@@ -71,6 +71,23 @@ export default function Overview() {
   const totalRecharge = coverage?.total_recharge ?? 0;
   const totalExtraction = coverage?.total_extraction ?? 0;
   const avgStage = coverage?.avg_extraction_stage ?? 0;
+
+  const groundwaterMap = useMemo(() => {
+    const map = new Map<string, GroundwaterRecord>();
+    for (const s of statesSummary) {
+      map.set(s.state, {
+        state: s.state,
+        assessment_year: s.latest_assessment_year,
+        extraction_stage: s.avg_extraction_stage,
+        category: s.avg_extraction_stage >= 100 ? 'Over-Exploited' :
+                  s.avg_extraction_stage >= 90 ? 'Critical' :
+                  s.avg_extraction_stage >= 70 ? 'Semi-Critical' : 'Safe',
+      });
+    }
+    return map;
+  }, [statesSummary]);
+
+  const selectedSummary = selectedState ? statesSummary.find(s => s.state === selectedState) : null;
 
   const kpiCards: KpiCardData[] = [
     {
@@ -188,64 +205,62 @@ export default function Overview() {
           <div className="map-stage">
             <div className="map-scanline" />
             <div className="map-leaflet-wrap">
-              <IndiaLeafletMap onSelect={setSelected} selected={selected?.name ?? null} />
+              <IndiaLeafletMap
+                groundwaterData={groundwaterMap}
+                selectedState={selectedState}
+                onSelectState={setSelectedState}
+              />
             </div>
           </div>
         </div>
 
         <div className="detail-panel">
-          {!selected ? (
+          {!selectedState ? (
             <div className="detail-empty">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.4}>
                 <path d="M9 4 3 6.5v14L9 18l6 2.5 6-2.5v-14L15 6.5 9 4Z" />
               </svg>
               Select a state on the map to open its groundwater intelligence card.
             </div>
-          ) : (
+          ) : selectedSummary ? (
             <>
               <div className="detail-head">
-                <div className="detail-loc">{selected.name}</div>
-                <div className="detail-year">2025 Dynamic Assessment</div>
+                <div className="detail-loc">{selectedState}</div>
+                <div className="detail-year">{selectedSummary.latest_assessment_year} Dynamic Assessment</div>
                 <span
                   className="status-pill"
                   style={{
-                    background: `${statusColor[selected.status]}22`,
-                    color: statusColor[selected.status],
+                    background: `${STATUS_COLORS[selectedSummary.avg_extraction_stage >= 100 ? 'Over-Exploited' : selectedSummary.avg_extraction_stage >= 90 ? 'Critical' : selectedSummary.avg_extraction_stage >= 70 ? 'Semi-Critical' : 'Safe']}22`,
+                    color: STATUS_COLORS[selectedSummary.avg_extraction_stage >= 100 ? 'Over-Exploited' : selectedSummary.avg_extraction_stage >= 90 ? 'Critical' : selectedSummary.avg_extraction_stage >= 70 ? 'Semi-Critical' : 'Safe'],
                   }}
                 >
-                  <span className="dot" style={{ background: statusColor[selected.status] }} />
-                  {statusLabel[selected.status]}
+                  <span className="dot" style={{ background: STATUS_COLORS[selectedSummary.avg_extraction_stage >= 100 ? 'Over-Exploited' : selectedSummary.avg_extraction_stage >= 90 ? 'Critical' : selectedSummary.avg_extraction_stage >= 70 ? 'Semi-Critical' : 'Safe'] }} />
+                  {selectedSummary.avg_extraction_stage >= 100 ? 'Over-Exploited' : selectedSummary.avg_extraction_stage >= 90 ? 'Critical' : selectedSummary.avg_extraction_stage >= 70 ? 'Semi-Critical' : 'Safe'}
                 </span>
               </div>
               <div className="metric-list">
                 <div className="metric-row">
                   <span className="metric-name metric-name-critical">Extraction Stage</span>
                   <span className="metric-num metric-num-critical">
-                    {selected.ext}
+                    {selectedSummary.avg_extraction_stage.toFixed(1)}%
                   </span>
                 </div>
                 <div className="metric-row">
-                  <span className="metric-name">Recharge</span>
+                  <span className="metric-name">Districts</span>
                   <span className="metric-num">
-                    {selected.rech}
+                    {selectedSummary.districts}
                   </span>
                 </div>
                 <div className="metric-row">
-                  <span className="metric-name">Extractable Resource</span>
+                  <span className="metric-name">Blocks</span>
                   <span className="metric-num">
-                    {selected.extractable}
-                  </span>
-                </div>
-                <div className="metric-row">
-                  <span className="metric-name">Groundwater Extraction</span>
-                  <span className="metric-num">
-                    {selected.exWater}
+                    {selectedSummary.blocks}
                   </span>
                 </div>
                 <div className="metric-row">
                   <span className="metric-name">Category</span>
-                  <span className="metric-num" style={{ color: statusColor[selected.status] }}>
-                    {statusLabel[selected.status]}
+                  <span className="metric-num" style={{ color: STATUS_COLORS[selectedSummary.avg_extraction_stage >= 100 ? 'Over-Exploited' : selectedSummary.avg_extraction_stage >= 90 ? 'Critical' : selectedSummary.avg_extraction_stage >= 70 ? 'Semi-Critical' : 'Safe'] }}>
+                    {selectedSummary.avg_extraction_stage >= 100 ? 'Over-Exploited' : selectedSummary.avg_extraction_stage >= 90 ? 'Critical' : selectedSummary.avg_extraction_stage >= 70 ? 'Semi-Critical' : 'Safe'}
                   </span>
                 </div>
               </div>
@@ -255,7 +270,7 @@ export default function Overview() {
                   <polyline
                     points="0,45 40,40 80,36 120,30 160,22 200,16 260,8"
                     fill="none"
-                    stroke={statusColor[selected.status]}
+                    stroke={STATUS_COLORS[selectedSummary.avg_extraction_stage >= 100 ? 'Over-Exploited' : selectedSummary.avg_extraction_stage >= 90 ? 'Critical' : selectedSummary.avg_extraction_stage >= 70 ? 'Semi-Critical' : 'Safe']}
                     strokeWidth={2}
                   />
                 </svg>
@@ -265,7 +280,7 @@ export default function Overview() {
                 <b>CGWB / IN-GRES</b>
               </div>
             </>
-          )}
+          ) : null}
         </div>
       </div>
     </section>

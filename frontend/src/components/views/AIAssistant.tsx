@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect, type FormEvent } from "react";
 import {
-  sendSmartChatMessage,
   streamSmartChat,
   checkLLMHealth,
   type SmartChatApiResponse,

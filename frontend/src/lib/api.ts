@@ -234,3 +234,153 @@ export interface OverviewData {
 export function getOverview(): Promise<OverviewData> {
   return fetchJson<OverviewData>("/api/groundwater/overview");
 }
+
+// ─── Map-Specific API ────────────────────────────────────────────────────────
+
+export interface StateSummary {
+  state: string;
+  districts: number;
+  blocks: number;
+  latest_assessment_year: number;
+  avg_extraction_stage: number;
+}
+
+export function getAllStates(): Promise<StateSummary[]> {
+  return fetchJson<StateSummary[]>("/api/states");
+}
+
+export interface AssessmentRecord {
+  id: number;
+  state: string;
+  district: string;
+  block: string;
+  assessment_year: number;
+  annual_groundwater_recharge: number;
+  extractable_groundwater_resource: number;
+  groundwater_extraction: number;
+  extraction_stage: number;
+  category: string;
+  latitude?: number;
+  longitude?: number;
+}
+
+export function getAssessments(params: {
+  state?: string;
+  district?: string;
+  year?: number;
+  category?: string;
+  limit?: number;
+} = {}): Promise<AssessmentRecord[]> {
+  const searchParams = new URLSearchParams();
+  if (params.state) searchParams.set('state', params.state);
+  if (params.district) searchParams.set('district', params.district);
+  if (params.year) searchParams.set('year', String(params.year));
+  if (params.category) searchParams.set('category', params.category);
+  if (params.limit) searchParams.set('limit', String(params.limit));
+  const qs = searchParams.toString();
+  return fetchJson<AssessmentRecord[]>(`/api/assessments${qs ? '?' + qs : ''}`);
+}
+
+export function getDistricts(state?: string): Promise<{ state: string; district: string; blocks: number; latest_assessment_year: number; avg_extraction_stage: number }[]> {
+  const params = state ? `?state=${encodeURIComponent(state)}` : '';
+  return fetchJson(`/api/districts${params}`);
+}
+
+export function getBlocks(params: { state?: string; district?: string } = {}): Promise<{ state: string; district: string; block: string; latitude: number; longitude: number; latest_extraction_stage: number; latest_category: string }[]> {
+  const searchParams = new URLSearchParams();
+  if (params.state) searchParams.set('state', params.state);
+  if (params.district) searchParams.set('district', params.district);
+  const qs = searchParams.toString();
+  return fetchJson(`/api/blocks${qs ? '?' + qs : ''}`);
+}
+
+export function getCategoryDistribution(state?: string, year?: number): Promise<{ category: string; count: number; percentage: number }[]> {
+  const searchParams = new URLSearchParams();
+  if (state) searchParams.set('state', state);
+  if (year) searchParams.set('year', String(year));
+  const qs = searchParams.toString();
+  return fetchJson(`/api/analytics/category-distribution${qs ? '?' + qs : ''}`);
+}
+
+export function getTrend(state?: string): Promise<{ assessment_year: number; total_extraction: number; avg_extraction_stage: number; total_recharge: number; blocks_assessed: number }[]> {
+  const params = state ? `?state=${encodeURIComponent(state)}` : '';
+  return fetchJson(`/api/analytics/trend${params}`);
+}
+
+export function getWhatChanged(state: string, year1: number, year2: number): Promise<any> {
+  return fetchJson(`/api/analytics/what-changed?state=${encodeURIComponent(state)}&year1=${year1}&year2=${year2}`);
+}
+
+export function getRiskScore(state: string, year?: number): Promise<any> {
+  const params = year ? `?year=${year}` : '';
+  return fetchJson(`/api/analytics/risk-score?state=${encodeURIComponent(state)}${params}`);
+}
+
+// ─── Map Action Types (for LLM integration) ─────────────────────────────────
+
+export type MapActionType =
+  | 'SELECT_STATE'
+  | 'SELECT_DISTRICT'
+  | 'SELECT_BLOCK'
+  | 'ZOOM_TO_LOCATION'
+  | 'SHOW_LAYER'
+  | 'HIDE_LAYER'
+  | 'SET_YEAR'
+  | 'SET_FILTER'
+  | 'SHOW_STATIONS'
+  | 'SHOW_QUALITY'
+  | 'SHOW_TREND'
+  | 'COMPARE_LOCATIONS'
+  | 'RESET_MAP';
+
+export interface MapAction {
+  type: MapActionType;
+  state?: string;
+  district?: string;
+  block?: string;
+  layer?: string;
+  year?: number;
+  filter?: string;
+  value?: string;
+  states?: string[];
+  lat?: number;
+  lng?: number;
+  zoom?: number;
+}
+
+export interface VisualizationAction {
+  type: string;
+  metric?: string;
+  state?: string;
+  states?: string[];
+}
+
+export interface LLMMapResponse {
+  message: string;
+  map_action?: MapAction;
+  visualization?: VisualizationAction;
+}
+
+// ─── District Data ───────────────────────────────────────────────────────────
+
+export function getDistrictData(state: string): Promise<{ districts: any[] }> {
+  return fetchJson(`/api/groundwater/district/${encodeURIComponent(state)}`);
+}
+
+export function getBlockData(state: string, district?: string): Promise<any[]> {
+  const params = district ? `?district=${encodeURIComponent(district)}` : '';
+  return fetchJson(`/api/groundwater/block/${encodeURIComponent(state)}${params}`);
+}
+
+export function getComparison(stateA: string, stateB: string): Promise<any> {
+  return fetchJson(`/api/groundwater/compare?state_a=${encodeURIComponent(stateA)}&state_b=${encodeURIComponent(stateB)}`);
+}
+
+export function getOverExploited(): Promise<any> {
+  return fetchJson('/api/groundwater/over-exploited');
+}
+
+export function getQualityInfo(state?: string): Promise<any> {
+  const params = state ? `?state=${encodeURIComponent(state)}` : '';
+  return fetchJson(`/api/groundwater/quality${params}`);
+}

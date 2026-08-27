@@ -498,7 +498,7 @@ def get_assessments(
     block: Optional[str] = Query(None),
     year: Optional[int] = Query(None),
     category: Optional[str] = Query(None),
-    limit: int = Query(200, le=500),
+    limit: int = Query(200, le=5000),
     db: Session = Depends(get_db),
 ):
     query = db.query(GroundWater)
