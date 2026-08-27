@@ -2,12 +2,15 @@ import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import IndiaLeafletMap, { GroundwaterRecord, MapMode } from '../IndiaLeafletMap';
 import { STATE_MAPPINGS, STATUS_COLORS } from '../../data/stateMap';
 import {
-  getAssessments, getStateTrends,
-  getOverview,
-  GroundwaterStateData, AssessmentRecord,
+  getAssessments, getStateTrends, getOverviewYear,
+  getAssessmentYears, getYearCompare, getStatusTransitions,
+  AssessmentRecord, AssessmentYearInfo, YearCompareResponse,
+  StatusTransitionsResponse,
 } from '../../lib/api';
 
-// ─── Map Mode Config ─────────────────────────────────────────────────────────
+// ─── Constants ──────────────────────────────────────────────────────────────
+
+const SUPPORTED_YEARS = [2020, 2021, 2022, 2023, 2024, 2025, 2026];
 
 const MAP_MODES: { key: MapMode; label: string; icon: string }[] = [
   { key: 'status', label: 'Groundwater Status', icon: '💧' },
@@ -15,30 +18,25 @@ const MAP_MODES: { key: MapMode; label: string; icon: string }[] = [
   { key: 'recharge', label: 'Annual Recharge', icon: '🌧️' },
 ];
 
-const YEARS = [2025, 2024, 2022, 2020];
-
-// ─── Helper: Build groundwater data map from API ─────────────────────────────
+// ─── Helpers ────────────────────────────────────────────────────────────────
 
 function buildGroundwaterMap(records: AssessmentRecord[]): Map<string, GroundwaterRecord> {
   const map = new Map<string, GroundwaterRecord>();
   for (const r of records) {
     if (!r.state) continue;
-    const existing = map.get(r.state);
-    if (!existing || (r.assessment_year || 0) > (existing.assessment_year || 0)) {
-      map.set(r.state, {
-        state: r.state,
-        district: r.district,
-        block: r.block,
-        assessment_year: r.assessment_year,
-        annual_groundwater_recharge: r.annual_groundwater_recharge,
-        extractable_groundwater_resource: r.extractable_groundwater_resource,
-        groundwater_extraction: r.groundwater_extraction,
-        extraction_stage: r.extraction_stage,
-        category: r.category,
-        latitude: r.latitude,
-        longitude: r.longitude,
-      });
-    }
+    map.set(r.state, {
+      state: r.state,
+      district: r.district,
+      block: r.block,
+      assessment_year: r.assessment_year,
+      annual_groundwater_recharge: r.annual_groundwater_recharge,
+      extractable_groundwater_resource: r.extractable_groundwater_resource,
+      groundwater_extraction: r.groundwater_extraction,
+      extraction_stage: r.extraction_stage,
+      category: r.category,
+      latitude: r.latitude,
+      longitude: r.longitude,
+    });
   }
   return map;
 }
@@ -66,7 +64,7 @@ function buildDistrictMap(records: AssessmentRecord[]): Map<string, GroundwaterR
   return map;
 }
 
-// ─── Main MapView ────────────────────────────────────────────────────────────
+// ─── Main Component ─────────────────────────────────────────────────────────
 
 export default function MapView() {
   const [mode, setMode] = useState<MapMode>('status');
@@ -78,24 +76,51 @@ export default function MapView() {
   const [showSearch, setShowSearch] = useState(false);
   const [showDistricts, setShowDistricts] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [panelTab, setPanelTab] = useState<'overview' | 'districts' | 'trends'>('overview');
+  const [panelTab, setPanelTab] = useState<'overview' | 'districts' | 'trends' | 'compare' | 'transitions'>('overview');
   const playRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Year availability
+  const [yearInfo, setYearInfo] = useState<AssessmentYearInfo[]>([]);
+  const [latestYear, setLatestYear] = useState(2025);
 
   // Data states
   const [allRecords, setAllRecords] = useState<AssessmentRecord[]>([]);
-  const [stateData, setStateData] = useState<GroundwaterStateData | null>(null);
-  const [districtRecords, setDistrictRecords] = useState<AssessmentRecord[]>([]);
-  const [trendData, setTrendData] = useState<any>(null);
   const [overview, setOverview] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
-  // ─── Data Fetching ───────────────────────────────────────────────────────
+  // State detail data
+  const [stateData, setStateData] = useState<any>(null);
+  const [districtRecords, setDistrictRecords] = useState<AssessmentRecord[]>([]);
+  const [trendData, setTrendData] = useState<any>(null);
+  const [transitions, setTransitions] = useState<StatusTransitionsResponse | null>(null);
+
+  // Year comparison
+  const [compareYear, setCompareYear] = useState<number | null>(null);
+  const [compareData, setCompareData] = useState<YearCompareResponse | null>(null);
+
+  // ─── Year Availability ──────────────────────────────────────────────────
+
+  useEffect(() => {
+    getAssessmentYears().then(resp => {
+      setYearInfo(resp.years);
+      if (resp.latest_verified) {
+        setLatestYear(resp.latest_verified);
+        setYear(resp.latest_verified);
+      }
+    }).catch(() => {});
+  }, []);
+
+  const isYearAvailable = useCallback((y: number) => {
+    return yearInfo.find(yi => yi.year === y)?.available ?? false;
+  }, [yearInfo]);
+
+  // ─── Data Fetching ──────────────────────────────────────────────────────
 
   useEffect(() => {
     setLoading(true);
     Promise.all([
       getAssessments({ year, limit: 2000 }),
-      getOverview(),
+      getOverviewYear(year),
     ]).then(([records, ov]) => {
       setAllRecords(records);
       setOverview(ov);
@@ -109,44 +134,56 @@ export default function MapView() {
       setStateData(null);
       setDistrictRecords([]);
       setTrendData(null);
+      setTransitions(null);
       setShowDistricts(false);
       return;
     }
     Promise.all([
       getAssessments({ state: selectedState, year, limit: 2000 }),
       getStateTrends(selectedState),
-    ]).then(([records, trend]: [AssessmentRecord[], any]) => {
+      getStatusTransitions(selectedState),
+    ]).then(([records, trend, trans]: [AssessmentRecord[], any, StatusTransitionsResponse]) => {
+      const blocks = records.filter((r: AssessmentRecord) => r.block);
+      const totalRecharge = blocks.reduce((s: number, r: AssessmentRecord) => s + (r.annual_groundwater_recharge || 0), 0);
+      const totalExtraction = blocks.reduce((s: number, r: AssessmentRecord) => s + (r.groundwater_extraction || 0), 0);
+      const avgStage = blocks.length ? blocks.reduce((s: number, r: AssessmentRecord) => s + (r.extraction_stage || 0), 0) / blocks.length : 0;
+
       setStateData({
-          state: selectedState,
-          data: (() => {
-            const blocks = records.filter((r: AssessmentRecord) => r.block);
-            const totalRecharge = blocks.reduce((s: number, r: AssessmentRecord) => s + (r.annual_groundwater_recharge || 0), 0);
-            const totalExtraction = blocks.reduce((s: number, r: AssessmentRecord) => s + (r.groundwater_extraction || 0), 0);
-            const avgStage = blocks.length ? blocks.reduce((s: number, r: AssessmentRecord) => s + (r.extraction_stage || 0), 0) / blocks.length : 0;
-            return {
-              total_recharge: totalRecharge,
-              total_extractable: blocks.reduce((s: number, r: AssessmentRecord) => s + (r.extractable_groundwater_resource || 0), 0),
-              total_extraction: totalExtraction,
-              avg_stage: avgStage,
-              districts: new Set(records.map((r: AssessmentRecord) => r.district).filter(Boolean)).size,
-              blocks: blocks.length,
-              oe_blocks: records.filter((r: AssessmentRecord) => r.category === 'Over-Exploited' && r.block).length,
-              critical_blocks: records.filter((r: AssessmentRecord) => r.category === 'Critical' && r.block).length,
-              sc_blocks: records.filter((r: AssessmentRecord) => r.category === 'Semi-Critical' && r.block).length,
-              safe_blocks: records.filter((r: AssessmentRecord) => r.category === 'Safe' && r.block).length,
-              assessment_year: year,
-            };
-          })(),
-          trend: trend ? {
-            direction: trend.direction,
-            total_change: trend.total_change,
-            percentage_change: trend.percentage_change,
-          } : null,
-        });
-        setDistrictRecords(records);
-        setTrendData(trend);
+        state: selectedState,
+        data: {
+          total_recharge: totalRecharge,
+          total_extractable: blocks.reduce((s: number, r: AssessmentRecord) => s + (r.extractable_groundwater_resource || 0), 0),
+          total_extraction: totalExtraction,
+          avg_stage: avgStage,
+          districts: new Set(records.map((r: AssessmentRecord) => r.district).filter(Boolean)).size,
+          blocks: blocks.length,
+          oe_blocks: records.filter((r: AssessmentRecord) => r.category === 'Over-Exploited' && r.block).length,
+          critical_blocks: records.filter((r: AssessmentRecord) => r.category === 'Critical' && r.block).length,
+          sc_blocks: records.filter((r: AssessmentRecord) => r.category === 'Semi-Critical' && r.block).length,
+          safe_blocks: records.filter((r: AssessmentRecord) => r.category === 'Safe' && r.block).length,
+          assessment_year: year,
+        },
+        trend: trend ? {
+          direction: trend.direction,
+          total_change: trend.total_change,
+          percentage_change: trend.percentage_change,
+          points: trend.points || [],
+        } : null,
       });
+      setDistrictRecords(records);
+      setTrendData(trend);
+      setTransitions(trans);
+    });
   }, [selectedState, year]);
+
+  // Year comparison
+  useEffect(() => {
+    if (!selectedState || !compareYear || compareYear === year) {
+      setCompareData(null);
+      return;
+    }
+    getYearCompare(selectedState, compareYear, year).then(setCompareData).catch(() => setCompareData(null));
+  }, [selectedState, year, compareYear]);
 
   // ─── Computed Data ──────────────────────────────────────────────────────
 
@@ -166,20 +203,15 @@ export default function MapView() {
     return { mapping, categories, totalBlocks: records.length };
   }, [selectedState, allRecords]);
 
-  // Search results
   const searchResults = useMemo(() => {
     if (!searchQuery || searchQuery.length < 2) return [];
     const q = searchQuery.toLowerCase();
-    const results: { name: string; nameHi: string; type: string; dbName: string }[] = [];
-    for (const m of STATE_MAPPINGS) {
-      if (m.displayName.toLowerCase().includes(q) || m.displayNameHi.includes(q) || m.dbName.toLowerCase().includes(q)) {
-        results.push({ name: m.displayName, nameHi: m.displayNameHi, type: m.type, dbName: m.dbName });
-      }
-    }
-    return results.slice(0, 8);
+    return STATE_MAPPINGS
+      .filter(m => m.displayName.toLowerCase().includes(q) || m.displayNameHi.includes(q) || m.dbName.toLowerCase().includes(q))
+      .map(m => ({ name: m.displayName, nameHi: m.displayNameHi, type: m.type, dbName: m.dbName }))
+      .slice(0, 8);
   }, [searchQuery]);
 
-  // Statistics
   const stats = useMemo(() => {
     const byState = new Map<string, AssessmentRecord[]>();
     for (const r of allRecords) {
@@ -187,12 +219,9 @@ export default function MapView() {
       if (!byState.has(r.state)) byState.set(r.state, []);
       byState.get(r.state)!.push(r);
     }
-
     let safe = 0, semi = 0, crit = 0, oe = 0, noData = 0;
-    const allStates = STATE_MAPPINGS.map(m => m.dbName);
-
-    for (const stateName of allStates) {
-      const records = byState.get(stateName);
+    for (const m of STATE_MAPPINGS) {
+      const records = byState.get(m.dbName);
       if (!records || records.length === 0) { noData++; continue; }
       const latest = records.filter(r => r.block).sort((a, b) => (b.assessment_year || 0) - (a.assessment_year || 0))[0];
       if (!latest) { noData++; continue; }
@@ -204,8 +233,7 @@ export default function MapView() {
         default: noData++;
       }
     }
-
-    return { safe, semi, crit, oe, noData, total: allStates.length };
+    return { safe, semi, crit, oe, noData, total: STATE_MAPPINGS.length };
   }, [allRecords]);
 
   // ─── Handlers ───────────────────────────────────────────────────────────
@@ -215,6 +243,8 @@ export default function MapView() {
     setSelectedDistrict(null);
     setShowDistricts(true);
     setPanelTab('overview');
+    setCompareYear(null);
+    setCompareData(null);
   }, []);
 
   const handleSelectDistrict = useCallback((_state: string, district: string) => {
@@ -234,19 +264,32 @@ export default function MapView() {
     setSelectedDistrict(null);
     setShowDistricts(false);
     setPanelTab('overview');
+    setCompareYear(null);
+    setCompareData(null);
   }, []);
 
-  // Year animation
+  const handleYearChange = useCallback((y: number) => {
+    if (isYearAvailable(y)) {
+      setYear(y);
+    }
+  }, [isYearAvailable]);
+
+  // Year animation — skip unavailable years
   useEffect(() => {
     if (isPlaying) {
       playRef.current = setInterval(() => {
         setYear(prev => {
-          const idx = YEARS.indexOf(prev);
-          if (idx >= YEARS.length - 1) {
+          const idx = SUPPORTED_YEARS.indexOf(prev);
+          if (idx < 0 || idx >= SUPPORTED_YEARS.length - 1) {
             setIsPlaying(false);
-            return YEARS[0];
+            return prev;
           }
-          return YEARS[idx + 1];
+          const nextIdx = idx + 1;
+          if (nextIdx >= SUPPORTED_YEARS.length) {
+            setIsPlaying(false);
+            return SUPPORTED_YEARS[0];
+          }
+          return SUPPORTED_YEARS[nextIdx];
         });
       }, 2000);
     }
@@ -256,6 +299,8 @@ export default function MapView() {
   const selectedStateMapping = selectedState ? STATE_MAPPINGS.find(m => m.dbName === selectedState) : null;
   const currentGroundwater = selectedState ? groundwaterMap.get(selectedState) : null;
 
+  // ─── Render ─────────────────────────────────────────────────────────────
+
   return (
     <div className="gw-map-view">
       {/* ─── Map Container ─── */}
@@ -263,7 +308,7 @@ export default function MapView() {
         {loading && (
           <div className="gw-map-loading">
             <div className="gw-map-loading-spinner" />
-            <span>Loading groundwater data...</span>
+            <span>Loading groundwater data for {year}...</span>
           </div>
         )}
 
@@ -314,11 +359,7 @@ export default function MapView() {
           {showSearch && searchResults.length > 0 && (
             <div className="gw-map-search-results">
               {searchResults.map(r => (
-                <button
-                  key={r.dbName}
-                  className="gw-map-search-result"
-                  onMouseDown={() => handleSearchSelect(r.dbName)}
-                >
+                <button key={r.dbName} className="gw-map-search-result" onMouseDown={() => handleSearchSelect(r.dbName)}>
                   <span className="gw-map-search-result-name">{r.name}</span>
                   <span className="gw-map-search-result-hi">{r.nameHi}</span>
                   <span className="gw-map-search-result-type">{r.type}</span>
@@ -328,36 +369,58 @@ export default function MapView() {
           )}
         </div>
 
-        {/* ─── Year Slider ─── */}
+        {/* ─── Year Timeline ─── */}
         <div className="gw-map-year-control">
-          <button className="gw-map-year-btn" onClick={() => setIsPlaying(!isPlaying)} title={isPlaying ? 'Pause' : 'Play'}>
+          <button className="gw-map-year-btn" onClick={() => setIsPlaying(!isPlaying)} title={isPlaying ? 'Pause animation' : 'Play animation'}>
             {isPlaying ? '⏸' : '▶'}
           </button>
           <button
             className="gw-map-year-btn"
-            onClick={() => { const i = YEARS.indexOf(year); if (i > 0) setYear(YEARS[i - 1]); }}
-            disabled={year === YEARS[0]}
+            onClick={() => {
+              const idx = SUPPORTED_YEARS.indexOf(year);
+              for (let i = idx - 1; i >= 0; i--) {
+                if (isYearAvailable(SUPPORTED_YEARS[i])) { setYear(SUPPORTED_YEARS[i]); return; }
+              }
+            }}
+            disabled={!SUPPORTED_YEARS.some((y, i) => i < SUPPORTED_YEARS.indexOf(year) && isYearAvailable(y))}
           >
             ◀
           </button>
           <div className="gw-map-year-slider">
-            {YEARS.map(y => (
-              <button
-                key={y}
-                className={`gw-map-year-dot ${y === year ? 'active' : ''}`}
-                onClick={() => setYear(y)}
-              >
-                <span className="gw-map-year-label">{y}</span>
-              </button>
-            ))}
+            {SUPPORTED_YEARS.map(y => {
+              const available = isYearAvailable(y);
+              const isCurrentYear = y === year;
+              return (
+                <button
+                  key={y}
+                  className={`gw-map-year-dot ${isCurrentYear ? 'active' : ''} ${!available ? 'unavailable' : ''}`}
+                  onClick={() => handleYearChange(y)}
+                  title={available ? `Assessment Year ${y}` : `${y} — Data unavailable`}
+                >
+                  <span className="gw-map-year-label">{y}</span>
+                  {!available && <span className="gw-map-year-unavail">—</span>}
+                </button>
+              );
+            })}
           </div>
           <button
             className="gw-map-year-btn"
-            onClick={() => { const i = YEARS.indexOf(year); if (i < YEARS.length - 1) setYear(YEARS[i + 1]); }}
-            disabled={year === YEARS[YEARS.length - 1]}
+            onClick={() => {
+              const idx = SUPPORTED_YEARS.indexOf(year);
+              for (let i = idx + 1; i < SUPPORTED_YEARS.length; i++) {
+                if (isYearAvailable(SUPPORTED_YEARS[i])) { setYear(SUPPORTED_YEARS[i]); return; }
+              }
+            }}
+            disabled={!SUPPORTED_YEARS.some((y, i) => i > SUPPORTED_YEARS.indexOf(year) && isYearAvailable(y))}
           >
             ▶
           </button>
+        </div>
+
+        {/* ─── Data Freshness Indicator ─── */}
+        <div className="gw-map-freshness">
+          <span className="gw-map-freshness-label">Latest verified assessment:</span>
+          <span className="gw-map-freshness-year">{latestYear}</span>
         </div>
 
         {/* ─── Legend ─── */}
@@ -432,7 +495,7 @@ export default function MapView() {
             {/* Status Badge */}
             {currentGroundwater && (
               <div className="gw-map-panel-status">
-                <div className="gw-map-panel-status-label">Groundwater Status</div>
+                <div className="gw-map-panel-status-label">Groundwater Status ({year})</div>
                 <div
                   className="gw-map-panel-status-badge"
                   style={{ background: STATUS_COLORS[currentGroundwater.category || 'No Data'] || STATUS_COLORS['No Data'] }}
@@ -447,15 +510,18 @@ export default function MapView() {
               <button className={`gw-map-panel-tab ${panelTab === 'overview' ? 'active' : ''}`} onClick={() => setPanelTab('overview')}>Overview</button>
               <button className={`gw-map-panel-tab ${panelTab === 'districts' ? 'active' : ''}`} onClick={() => setPanelTab('districts')}>Districts</button>
               <button className={`gw-map-panel-tab ${panelTab === 'trends' ? 'active' : ''}`} onClick={() => setPanelTab('trends')}>Trends</button>
+              <button className={`gw-map-panel-tab ${panelTab === 'compare' ? 'active' : ''}`} onClick={() => setPanelTab('compare')}>Compare</button>
+              <button className={`gw-map-panel-tab ${panelTab === 'transitions' ? 'active' : ''}`} onClick={() => setPanelTab('transitions')}>History</button>
             </div>
 
             {/* Panel Content */}
             <div className="gw-map-panel-content">
+              {/* ─── Overview Tab ─── */}
               {panelTab === 'overview' && stateData && (
                 <div className="gw-map-panel-metrics">
                   <div className="gw-map-panel-metric">
                     <span className="gw-map-panel-metric-label">Assessment Year</span>
-                    <span className="gw-map-panel-metric-value">{stateData.data.assessment_year}</span>
+                    <span className="gw-map-panel-metric-value highlight">{stateData.data.assessment_year}</span>
                   </div>
                   <div className="gw-map-panel-metric">
                     <span className="gw-map-panel-metric-label">Stage of Extraction</span>
@@ -478,9 +544,8 @@ export default function MapView() {
                     <span className="gw-map-panel-metric-value">{stateData.data.blocks}</span>
                   </div>
 
-                  {/* Category Breakdown */}
                   <div className="gw-map-panel-divider" />
-                  <div className="gw-map-panel-metric-label">Category Breakdown</div>
+                  <div className="gw-map-panel-metric-label">Category Breakdown ({year})</div>
                   <div className="gw-map-panel-categories">
                     {stateSummary && Object.entries(stateSummary.categories).map(([cat, count]) => (
                       <div key={cat} className="gw-map-panel-cat">
@@ -491,7 +556,6 @@ export default function MapView() {
                     ))}
                   </div>
 
-                  {/* Trend */}
                   {stateData.trend && (
                     <>
                       <div className="gw-map-panel-divider" />
@@ -508,12 +572,13 @@ export default function MapView() {
                 </div>
               )}
 
+              {/* ─── Districts Tab ─── */}
               {panelTab === 'districts' && (
                 <div className="gw-map-panel-districts">
                   {districtRecords.length > 0 ? (
                     <>
                       <div className="gw-map-panel-districts-header">
-                        Districts in {selectedStateMapping.displayName}
+                        Districts in {selectedStateMapping.displayName} ({year})
                       </div>
                       {(() => {
                         const byDistrict = new Map<string, AssessmentRecord[]>();
@@ -522,83 +587,115 @@ export default function MapView() {
                           if (!byDistrict.has(r.district)) byDistrict.set(r.district, []);
                           byDistrict.get(r.district)!.push(r);
                         }
-                        const districts = Array.from(byDistrict.entries())
+                        return Array.from(byDistrict.entries())
                           .map(([name, records]) => ({
                             name,
                             category: records.find(r => r.block)?.category || records[0]?.category || 'No Data',
                             stage: records.filter(r => r.block).reduce((s, r) => s + (r.extraction_stage || 0), 0) / Math.max(records.filter(r => r.block).length, 1),
                             blocks: records.filter(r => r.block).length,
                           }))
-                          .sort((a, b) => b.stage - a.stage);
-
-                        return districts.map(d => (
-                          <button
-                            key={d.name}
-                            className={`gw-map-panel-district ${d.name === selectedDistrict ? 'selected' : ''}`}
-                            onClick={() => handleSelectDistrict(selectedState!, d.name)}
-                          >
-                            <div className="gw-map-panel-district-name">{d.name}</div>
-                            <div className="gw-map-panel-district-meta">
-                              <span className="gw-map-panel-cat-dot" style={{ background: STATUS_COLORS[d.category] || STATUS_COLORS['No Data'] }} />
-                              <span>{d.category}</span>
-                              <span className="gw-map-panel-district-stage">{d.stage.toFixed(1)}%</span>
-                              <span className="gw-map-panel-district-blocks">{d.blocks} blocks</span>
-                            </div>
-                          </button>
-                        ));
+                          .sort((a, b) => b.stage - a.stage)
+                          .map(d => (
+                            <button
+                              key={d.name}
+                              className={`gw-map-panel-district ${d.name === selectedDistrict ? 'selected' : ''}`}
+                              onClick={() => handleSelectDistrict(selectedState!, d.name)}
+                            >
+                              <div className="gw-map-panel-district-name">{d.name}</div>
+                              <div className="gw-map-panel-district-meta">
+                                <span className="gw-map-panel-cat-dot" style={{ background: STATUS_COLORS[d.category] || STATUS_COLORS['No Data'] }} />
+                                <span>{d.category}</span>
+                                <span className="gw-map-panel-district-stage">{d.stage.toFixed(1)}%</span>
+                                <span className="gw-map-panel-district-blocks">{d.blocks} blocks</span>
+                              </div>
+                            </button>
+                          ));
                       })()}
                     </>
                   ) : (
-                    <div className="gw-map-panel-empty">No district-level data available</div>
+                    <div className="gw-map-panel-empty">
+                      No district-level data available for {year}
+                    </div>
                   )}
                 </div>
               )}
 
+              {/* ─── Trends Tab ─── */}
               {panelTab === 'trends' && trendData && (
                 <div className="gw-map-panel-trends">
                   <div className="gw-map-panel-trends-header">
-                    Multi-Year Trend: {selectedStateMapping.displayName}
+                    Historical Trend: {selectedStateMapping.displayName}
                   </div>
                   {trendData.points && trendData.points.length > 0 ? (
                     <div className="gw-map-panel-trend-chart">
                       <svg viewBox="0 0 300 150" className="gw-trend-svg">
                         {(() => {
                           const points = trendData.points;
-                          const maxVal = Math.max(...points.map((p: any) => p.value));
-                          const minVal = Math.min(...points.map((p: any) => p.value));
+                          if (!points || points.length === 0) return null;
+                          const values = points.map((p: any) => p.value).filter((v: number) => v != null && !isNaN(v));
+                          if (values.length === 0) return null;
+                          const maxVal = Math.max(...values);
+                          const minVal = Math.min(...values);
                           const range = maxVal - minVal || 1;
-                          const padding = 20;
+                          const padding = 25;
                           const w = 300 - padding * 2;
                           const h = 150 - padding * 2;
 
-                          const pathPoints = points.map((p: any, i: number) => {
-                            const x = padding + (i / (points.length - 1)) * w;
-                            const y = padding + (1 - (p.value - minVal) / range) * h;
-                            return `${x},${y}`;
-                          });
+                          // Build SVG points with gaps for missing years
+                          const svgPoints: { x: number; y: number; year: number; value: number }[] = [];
+                          const allYears = SUPPORTED_YEARS.filter(y => y >= Math.min(...points.map((p: any) => p.year)) && y <= Math.max(...points.map((p: any) => p.year)));
+                          const pointMap = new Map<number, number>(points.map((p: any) => [p.year as number, p.value as number]));
+                          const availableYears = allYears.filter(y => pointMap.has(y));
+
+                          for (let i = 0; i < availableYears.length; i++) {
+                            const yr = availableYears[i];
+                            const val: number = pointMap.get(yr) ?? 0;
+                            svgPoints.push({
+                              x: padding + (i / Math.max(availableYears.length - 1, 1)) * w,
+                              y: padding + (1 - (val - minVal) / range) * h,
+                              year: yr,
+                              value: val,
+                            });
+                          }
 
                           return (
                             <>
-                              <polyline
-                                points={pathPoints.join(' ')}
-                                fill="none"
-                                stroke="#4da8ff"
-                                strokeWidth="2"
-                                strokeLinejoin="round"
-                              />
-                              {points.map((p: any, i: number) => {
-                                const x = padding + (i / (points.length - 1)) * w;
-                                const y = padding + (1 - (p.value - minVal) / range) * h;
+                              {/* Line segments (skip gaps) */}
+                              {svgPoints.length > 1 && svgPoints.map((pt, i) => {
+                                if (i === 0) return null;
                                 return (
-                                  <g key={i}>
-                                    <circle cx={x} cy={y} r="4" fill="#4da8ff" />
-                                    <text x={x} y={y - 10} textAnchor="middle" fill="#94a3b8" fontSize="10">
-                                      {p.value.toFixed(1)}%
-                                    </text>
-                                    <text x={x} y={h + padding + 15} textAnchor="middle" fill="#64748b" fontSize="10">
-                                      {p.year}
-                                    </text>
-                                  </g>
+                                  <line
+                                    key={`line-${i}`}
+                                    x1={svgPoints[i - 1].x}
+                                    y1={svgPoints[i - 1].y}
+                                    x2={pt.x}
+                                    y2={pt.y}
+                                    stroke="#4da8ff"
+                                    strokeWidth="2"
+                                    strokeLinecap="round"
+                                  />
+                                );
+                              })}
+                              {/* Points */}
+                              {svgPoints.map((pt, i) => (
+                                <g key={i}>
+                                  <circle cx={pt.x} cy={pt.y} r="4" fill="#4da8ff" />
+                                  <text x={pt.x} y={pt.y - 10} textAnchor="middle" fill="#94a3b8" fontSize="9">
+                                    {pt.value.toFixed(1)}%
+                                  </text>
+                                  <text x={pt.x} y={h + padding + 14} textAnchor="middle" fill="#64748b" fontSize="9">
+                                    {pt.year}
+                                  </text>
+                                </g>
+                              ))}
+                              {/* Missing year indicators */}
+                              {allYears.filter(y => !pointMap.has(y)).map(yr => {
+                                const idx = availableYears.length;
+                                const x = padding + (idx / Math.max(availableYears.length, 1)) * w;
+                                return (
+                                  <text key={`miss-${yr}`} x={x} y={h + padding + 14} textAnchor="middle" fill="#334155" fontSize="9" textDecoration="line-through">
+                                    {yr}
+                                  </text>
                                 );
                               })}
                             </>
@@ -624,6 +721,159 @@ export default function MapView() {
                   )}
                 </div>
               )}
+
+              {/* ─── Year Comparison Tab ─── */}
+              {panelTab === 'compare' && (
+                <div className="gw-map-panel-compare">
+                  <div className="gw-map-panel-compare-header">
+                    Year Comparison: {selectedStateMapping.displayName}
+                  </div>
+                  <div className="gw-map-panel-compare-select">
+                    <label>Compare with year:</label>
+                    <select
+                      value={compareYear || ''}
+                      onChange={e => setCompareYear(e.target.value ? Number(e.target.value) : null)}
+                    >
+                      <option value="">Select year...</option>
+                      {SUPPORTED_YEARS.filter(y => y !== year).map(y => (
+                        <option key={y} value={y} disabled={!isYearAvailable(y)}>
+                          {y} {!isYearAvailable(y) ? '(unavailable)' : ''}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  {compareData ? (
+                    <div className="gw-map-panel-compare-results">
+                      <div className="gw-map-panel-compare-summary">
+                        <div className="gw-map-compare-header">
+                          <span className="gw-map-compare-vs">{compareData.year1} vs {compareData.year2}</span>
+                          <span className={`gw-map-compare-trend ${compareData.summary.overall_trend}`}>
+                            {compareData.summary.overall_trend === 'improving' ? '↓ Improving' :
+                             compareData.summary.overall_trend === 'deteriorating' ? '↑ Deteriorating' : '→ Stable'}
+                          </span>
+                        </div>
+                        <div className="gw-map-panel-metric">
+                          <span className="gw-map-panel-metric-label">Avg Stage ({compareData.year1})</span>
+                          <span className="gw-map-panel-metric-value">{compareData.summary.avg_stage_y1.toFixed(1)}%</span>
+                        </div>
+                        <div className="gw-map-panel-metric">
+                          <span className="gw-map-panel-metric-label">Avg Stage ({compareData.year2})</span>
+                          <span className="gw-map-panel-metric-value highlight">{compareData.summary.avg_stage_y2.toFixed(1)}%</span>
+                        </div>
+                        <div className="gw-map-panel-metric">
+                          <span className="gw-map-panel-metric-label">Stage Change</span>
+                          <span className={`gw-map-panel-metric-value trend ${compareData.summary.stage_change < 0 ? 'improving' : compareData.summary.stage_change > 0 ? 'deteriorating' : 'stable'}`}>
+                            {compareData.summary.stage_change > 0 ? '+' : ''}{compareData.summary.stage_change.toFixed(1)}pp
+                            ({compareData.summary.pct_change > 0 ? '+' : ''}{compareData.summary.pct_change.toFixed(1)}%)
+                          </span>
+                        </div>
+                        <div className="gw-map-panel-divider" />
+                        <div className="gw-map-panel-metric">
+                          <span className="gw-map-panel-metric-label">Blocks Compared</span>
+                          <span className="gw-map-panel-metric-value">{compareData.summary.blocks_compared}</span>
+                        </div>
+                        <div className="gw-map-panel-metric">
+                          <span className="gw-map-panel-metric-label">Improved</span>
+                          <span className="gw-map-panel-metric-value" style={{ color: '#10b981' }}>{compareData.summary.improvements}</span>
+                        </div>
+                        <div className="gw-map-panel-metric">
+                          <span className="gw-map-panel-metric-label">Deteriorated</span>
+                          <span className="gw-map-panel-metric-value" style={{ color: '#ef4444' }}>{compareData.summary.deteriorations}</span>
+                        </div>
+                        <div className="gw-map-panel-metric">
+                          <span className="gw-map-panel-metric-label">Unchanged</span>
+                          <span className="gw-map-panel-metric-value">{compareData.summary.unchanged}</span>
+                        </div>
+                        <div className="gw-map-panel-divider" />
+                        <div className="gw-map-panel-metric">
+                          <span className="gw-map-panel-metric-label">Category Improvements</span>
+                          <span className="gw-map-panel-metric-value" style={{ color: '#10b981' }}>{compareData.summary.improvements_cat}</span>
+                        </div>
+                        <div className="gw-map-panel-metric">
+                          <span className="gw-map-panel-metric-label">Category Deteriorations</span>
+                          <span className="gw-map-panel-metric-value" style={{ color: '#ef4444' }}>{compareData.summary.deteriorations_cat}</span>
+                        </div>
+                      </div>
+
+                      {/* Block-level changes */}
+                      {compareData.block_changes.length > 0 && (
+                        <div className="gw-map-panel-compare-blocks">
+                          <div className="gw-map-panel-compare-blocks-header">Block Changes (top 20)</div>
+                          {compareData.block_changes.slice(0, 20).map((bc, i) => (
+                            <div key={i} className="gw-map-compare-block-row">
+                              <div className="gw-map-compare-block-name">{bc.block}</div>
+                              <div className="gw-map-compare-block-meta">
+                                <span>{bc.district}</span>
+                                <span className={`gw-map-compare-block-change ${bc.stage_change < 0 ? 'improving' : bc.stage_change > 0 ? 'deteriorating' : 'stable'}`}>
+                                  {bc.stage_change > 0 ? '+' : ''}{bc.stage_change.toFixed(1)}pp
+                                </span>
+                                <span>{bc.cat_y1} → {bc.cat_y2}</span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="gw-map-panel-empty">
+                      {compareYear && !isYearAvailable(compareYear)
+                        ? `No verified data available for ${compareYear}`
+                        : 'Select a year to compare'
+                      }
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* ─── Transitions / History Tab ─── */}
+              {panelTab === 'transitions' && transitions && (
+                <div className="gw-map-panel-transitions">
+                  <div className="gw-map-panel-transitions-header">
+                    Status History: {selectedStateMapping.displayName}
+                  </div>
+                  {transitions.year_summaries.length > 0 ? (
+                    <>
+                      {/* Year summaries */}
+                      <div className="gw-map-transitions-timeline">
+                        {transitions.year_summaries.map(ys => (
+                          <div key={ys.year} className={`gw-map-transition-year ${ys.year === year ? 'current' : ''}`}>
+                            <div className="gw-map-transition-year-dot" style={{ background: STATUS_COLORS[ys.dominant_category] || STATUS_COLORS['No Data'] }} />
+                            <div className="gw-map-transition-year-info">
+                              <div className="gw-map-transition-year-label">{ys.year}</div>
+                              <div className="gw-map-transition-year-cat">{ys.dominant_category}</div>
+                              <div className="gw-map-transition-year-stage">{ys.avg_stage.toFixed(1)}% avg stage</div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Transitions */}
+                      {transitions.transitions.length > 0 && (
+                        <div className="gw-map-transitions-changes">
+                          <div className="gw-map-transitions-changes-header">Transitions</div>
+                          {transitions.transitions.map((t, i) => (
+                            <div key={i} className={`gw-map-transition-row ${t.status}`}>
+                              <div className="gw-map-transition-years">{t.from_year} → {t.to_year}</div>
+                              <div className="gw-map-transition-cats">
+                                <span style={{ color: STATUS_COLORS[t.from_category] }}>{t.from_category}</span>
+                                <span className="gw-map-transition-arrow">
+                                  {t.status === 'improved' ? '↓' : t.status === 'deteriorated' ? '↑' : '→'}
+                                </span>
+                                <span style={{ color: STATUS_COLORS[t.to_category] }}>{t.to_category}</span>
+                              </div>
+                              <div className="gw-map-transition-stage">
+                                {t.stage_change > 0 ? '+' : ''}{t.stage_change.toFixed(1)}pp
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <div className="gw-map-panel-empty">Insufficient historical data for transitions</div>
+                  )}
+                </div>
+              )}
             </div>
           </>
         ) : (
@@ -634,7 +884,7 @@ export default function MapView() {
               <div className="gw-map-panel-overview-subtitle">भारत भूजल अवलोकन</div>
             </div>
             <div className="gw-map-panel-overview-year">Assessment Year: {year}</div>
-            {overview && (
+            {overview && overview.data_available ? (
               <div className="gw-map-panel-overview-stats">
                 <div className="gw-map-panel-overview-stat">
                   <span className="gw-map-panel-overview-stat-value">{overview.states || stats.total}</span>
@@ -646,19 +896,19 @@ export default function MapView() {
                 </div>
                 <div className="gw-map-panel-overview-divider" />
                 <div className="gw-map-panel-overview-stat safe">
-                  <span className="gw-map-panel-overview-stat-value">{overview.safe_blocks || stats.safe}</span>
+                  <span className="gw-map-panel-overview-stat-value">{overview.safe_blocks || 0}</span>
                   <span className="gw-map-panel-overview-stat-label">Safe</span>
                 </div>
                 <div className="gw-map-panel-overview-stat semi">
-                  <span className="gw-map-panel-overview-stat-value">{overview.sc_blocks || stats.semi}</span>
+                  <span className="gw-map-panel-overview-stat-value">{overview.sc_blocks || 0}</span>
                   <span className="gw-map-panel-overview-stat-label">Semi-Critical</span>
                 </div>
                 <div className="gw-map-panel-overview-stat critical">
-                  <span className="gw-map-panel-overview-stat-value">{overview.critical_blocks || stats.crit}</span>
+                  <span className="gw-map-panel-overview-stat-value">{overview.critical_blocks || 0}</span>
                   <span className="gw-map-panel-overview-stat-label">Critical</span>
                 </div>
                 <div className="gw-map-panel-overview-stat oe">
-                  <span className="gw-map-panel-overview-stat-value">{overview.oe_blocks || stats.oe}</span>
+                  <span className="gw-map-panel-overview-stat-value">{overview.oe_blocks || 0}</span>
                   <span className="gw-map-panel-overview-stat-label">Over-Exploited</span>
                 </div>
                 <div className="gw-map-panel-overview-divider" />
@@ -670,6 +920,10 @@ export default function MapView() {
                   <span className="gw-map-panel-overview-stat-value">{(overview.total_recharge || 0).toLocaleString()} MCM</span>
                   <span className="gw-map-panel-overview-stat-label">Total Recharge</span>
                 </div>
+              </div>
+            ) : (
+              <div className="gw-map-panel-empty">
+                {year} — Data unavailable for this assessment year
               </div>
             )}
             <div className="gw-map-panel-overview-hint">

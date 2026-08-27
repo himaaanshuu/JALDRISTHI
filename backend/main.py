@@ -2506,6 +2506,262 @@ def list_datasets():
     return {"datasets": rows}
 
 
+# ─── Assessment Year Endpoints ───────────────────────────────────────────────
+
+SUPPORTED_YEARS = [2020, 2021, 2022, 2023, 2024, 2025, 2026]
+
+
+@app.get("/api/groundwater/assessment-years")
+def get_assessment_years():
+    """Return which assessment years are available in the database."""
+    if USE_SUPABASE:
+        from supabase_client import sb_select
+        rows = sb_select("groundwater")
+        available = set()
+        for r in rows:
+            yr = r.get("assessment_year")
+            if yr:
+                available.add(yr)
+    else:
+        conn = __import__("sqlite3").connect(DB_PATH)
+        c = conn.cursor()
+        c.execute("SELECT DISTINCT assessment_year FROM groundwater WHERE assessment_year IS NOT NULL")
+        available = {row[0] for row in c.fetchall()}
+        conn.close()
+
+    return {
+        "requested_range": SUPPORTED_YEARS,
+        "years": [
+            {"year": y, "available": y in available, "record_count": 0}
+            for y in SUPPORTED_YEARS
+        ],
+        "latest_verified": max((y for y in SUPPORTED_YEARS if y in available), default=None),
+    }
+
+
+@app.get("/api/groundwater/overview-year")
+def get_overview_year(year: int = Query(default=None)):
+    """Get year-specific national groundwater overview."""
+    if USE_SUPABASE:
+        from supabase_client import sb_select
+        rows = sb_select("groundwater")
+        blocks = [r for r in rows if r.get("block")]
+        if year:
+            blocks = [r for r in blocks if r.get("assessment_year") == year]
+    else:
+        import sqlite3
+        conn = sqlite3.connect(DB_PATH)
+        conn.row_factory = sqlite3.Row
+        c = conn.cursor()
+        if year:
+            c.execute("""
+                SELECT * FROM groundwater WHERE block != '' AND assessment_year = ?
+            """, (year,))
+        else:
+            c.execute("SELECT * FROM groundwater WHERE block != ''")
+        blocks = [dict(r) for r in c.fetchall()]
+        conn.close()
+
+    if not blocks:
+        return {
+            "total_extraction": 0, "total_recharge": 0, "avg_stage": 0,
+            "states": 0, "districts": 0, "blocks": 0, "total_records": 0,
+            "oe_blocks": 0, "critical_blocks": 0, "sc_blocks": 0, "safe_blocks": 0,
+            "year": year, "data_available": False,
+        }
+
+    states = set(r.get("state", "") for r in blocks if r.get("state"))
+    districts = set(r.get("district", "") for r in blocks if r.get("district"))
+    return {
+        "total_extraction": round(sum(r.get("groundwater_extraction", 0) or 0 for r in blocks), 2),
+        "total_recharge": round(sum(r.get("annual_groundwater_recharge", 0) or 0 for r in blocks), 2),
+        "avg_stage": round(sum(r.get("extraction_stage", 0) or 0 for r in blocks) / len(blocks), 2),
+        "states": len(states), "districts": len(districts), "blocks": len(blocks),
+        "total_records": len(blocks),
+        "oe_blocks": sum(1 for r in blocks if r.get("category") == "Over-Exploited"),
+        "critical_blocks": sum(1 for r in blocks if r.get("category") == "Critical"),
+        "sc_blocks": sum(1 for r in blocks if r.get("category") == "Semi-Critical"),
+        "safe_blocks": sum(1 for r in blocks if r.get("category") == "Safe"),
+        "year": year, "data_available": True,
+    }
+
+
+@app.get("/api/groundwater/year-compare")
+def year_compare(state: str = Query(...), year1: int = Query(...), year2: int = Query(...)):
+    """Compare two assessment years for a state with YoY metrics."""
+    resolved = resolve_state(state)
+    if not resolved:
+        return JSONResponse(status_code=404, content={"error": f"State '{state}' not found"})
+
+    if USE_SUPABASE:
+        from supabase_client import sb_select
+        rows = sb_select("groundwater", filters={"state": resolved})
+        blocks = [r for r in rows if r.get("block")]
+    else:
+        import sqlite3
+        conn = sqlite3.connect(DB_PATH)
+        conn.row_factory = sqlite3.Row
+        c = conn.cursor()
+        c.execute("""
+            SELECT * FROM groundwater WHERE state = ? AND block != ''
+            AND assessment_year IN (?, ?)
+        """, (resolved, year1, year2))
+        blocks = [dict(r) for r in c.fetchall()]
+        conn.close()
+
+    by_key = {}
+    for r in blocks:
+        key = (r.get("block", ""), r.get("district", ""))
+        yr = r.get("assessment_year")
+        if yr in (year1, year2):
+            by_key.setdefault(key, {})[yr] = r
+
+    block_changes = []
+    for key, years_data in by_key.items():
+        r1 = years_data.get(year1)
+        r2 = years_data.get(year2)
+        if r1 and r2:
+            stage1 = r1.get("extraction_stage", 0) or 0
+            stage2 = r2.get("extraction_stage", 0) or 0
+            block_changes.append({
+                "block": key[0], "district": key[1],
+                "stage_y1": stage1, "stage_y2": stage2,
+                "stage_change": round(stage2 - stage1, 2),
+                "cat_y1": r1.get("category", ""), "cat_y2": r2.get("category", ""),
+                "ext_y1": r1.get("groundwater_extraction", 0) or 0,
+                "ext_y2": r2.get("groundwater_extraction", 0) or 0,
+                "ext_change": round((r2.get("groundwater_extraction", 0) or 0) - (r1.get("groundwater_extraction", 0) or 0), 2),
+                "rech_y1": r1.get("annual_groundwater_recharge", 0) or 0,
+                "rech_y2": r2.get("annual_groundwater_recharge", 0) or 0,
+            })
+
+    blocks_y1 = [r for r in blocks if r.get("assessment_year") == year1 and r.get("block")]
+    blocks_y2 = [r for r in blocks if r.get("assessment_year") == year2 and r.get("block")]
+
+    avg_stage1 = sum(r.get("extraction_stage", 0) or 0 for r in blocks_y1) / max(len(blocks_y1), 1)
+    avg_stage2 = sum(r.get("extraction_stage", 0) or 0 for r in blocks_y2) / max(len(blocks_y2), 1)
+    total_ext1 = sum(r.get("groundwater_extraction", 0) or 0 for r in blocks_y1)
+    total_ext2 = sum(r.get("groundwater_extraction", 0) or 0 for r in blocks_y2)
+    total_rech1 = sum(r.get("annual_groundwater_recharge", 0) or 0 for r in blocks_y1)
+    total_rech2 = sum(r.get("annual_groundwater_recharge", 0) or 0 for r in blocks_y2)
+
+    improvements = sum(1 for b in block_changes if b["stage_change"] < -2)
+    deteriorations = sum(1 for b in block_changes if b["stage_change"] > 2)
+    unchanged = len(block_changes) - improvements - deteriorations
+
+    improvements_cat = sum(1 for b in block_changes if b["cat_y2"] == "Safe" and b["cat_y1"] != "Safe")
+    deteriorations_cat = sum(1 for b in block_changes
+                             if b["cat_y1"] == "Safe" and b["cat_y2"] != "Safe"
+                             or b["cat_y1"] == "Semi-Critical" and b["cat_y2"] in ("Critical", "Over-Exploited")
+                             or b["cat_y1"] == "Critical" and b["cat_y2"] == "Over-Exploited")
+
+    return {
+        "state": resolved, "year1": year1, "year2": year2,
+        "data_y1_available": len(blocks_y1) > 0,
+        "data_y2_available": len(blocks_y2) > 0,
+        "summary": {
+            "avg_stage_y1": round(avg_stage1, 2),
+            "avg_stage_y2": round(avg_stage2, 2),
+            "stage_change": round(avg_stage2 - avg_stage1, 2),
+            "pct_change": round(((avg_stage2 - avg_stage1) / max(avg_stage1, 0.01)) * 100, 2),
+            "total_extraction_y1": round(total_ext1, 2),
+            "total_extraction_y2": round(total_ext2, 2),
+            "ext_change": round(total_ext2 - total_ext1, 2),
+            "total_recharge_y1": round(total_rech1, 2),
+            "total_recharge_y2": round(total_rech2, 2),
+            "rech_change": round(total_rech2 - total_rech1, 2),
+            "blocks_compared": len(block_changes),
+            "improvements": improvements,
+            "deteriorations": deteriorations,
+            "unchanged": unchanged,
+            "improvements_cat": improvements_cat,
+            "deteriorations_cat": deteriorations_cat,
+            "overall_trend": "improving" if avg_stage2 < avg_stage1 else "deteriorating" if avg_stage2 > avg_stage1 else "stable",
+        },
+        "block_changes": sorted(block_changes, key=lambda x: abs(x["stage_change"]), reverse=True),
+    }
+
+
+@app.get("/api/groundwater/status-transitions")
+def status_transitions(state: str = Query(...)):
+    """Calculate status transitions for a state across available years."""
+    resolved = resolve_state(state)
+    if not resolved:
+        return JSONResponse(status_code=404, content={"error": f"State '{state}' not found"})
+
+    if USE_SUPABASE:
+        from supabase_client import sb_select
+        rows = sb_select("groundwater", filters={"state": resolved})
+        blocks = [r for r in rows if r.get("block")]
+    else:
+        import sqlite3
+        conn = sqlite3.connect(DB_PATH)
+        conn.row_factory = sqlite3.Row
+        c = conn.cursor()
+        c.execute("""
+            SELECT * FROM groundwater WHERE state = ? AND block != ''
+            ORDER BY assessment_year
+        """, (resolved,))
+        blocks = [dict(r) for r in c.fetchall()]
+        conn.close()
+
+    by_year = {}
+    for r in blocks:
+        yr = r.get("assessment_year")
+        if yr:
+            by_year.setdefault(yr, []).append(r)
+
+    year_summaries = []
+    for yr in sorted(by_year.keys()):
+        yr_blocks = by_year[yr]
+        cats = {}
+        for b in yr_blocks:
+            c = b.get("category", "No Data")
+            cats[c] = cats.get(c, 0) + 1
+        avg_stage = sum(b.get("extraction_stage", 0) or 0 for b in yr_blocks) / len(yr_blocks)
+        dominant = max(cats, key=cats.get) if cats else "No Data"
+        year_summaries.append({
+            "year": yr,
+            "blocks": len(yr_blocks),
+            "avg_stage": round(avg_stage, 2),
+            "categories": cats,
+            "dominant_category": dominant,
+        })
+
+    transitions = []
+    for i in range(1, len(year_summaries)):
+        prev = year_summaries[i - 1]
+        curr = year_summaries[i]
+        prev_cat = prev["dominant_category"]
+        curr_cat = curr["dominant_category"]
+        cat_order = {"Safe": 0, "Semi-Critical": 1, "Critical": 2, "Over-Exploited": 3, "No Data": -1}
+        prev_rank = cat_order.get(prev_cat, -1)
+        curr_rank = cat_order.get(curr_cat, -1)
+        if curr_rank < prev_rank:
+            status = "improved"
+        elif curr_rank > prev_rank:
+            status = "deteriorated"
+        else:
+            status = "unchanged"
+        transitions.append({
+            "from_year": prev["year"],
+            "to_year": curr["year"],
+            "from_category": prev_cat,
+            "to_category": curr_cat,
+            "from_avg_stage": prev["avg_stage"],
+            "to_avg_stage": curr["avg_stage"],
+            "stage_change": round(curr["avg_stage"] - prev["avg_stage"], 2),
+            "status": status,
+        })
+
+    return {
+        "state": resolved,
+        "year_summaries": year_summaries,
+        "transitions": transitions,
+        "years_available": [s["year"] for s in year_summaries],
+    }
+
+
 # --- Serve built frontend ---
 STATIC_DIR = os.path.join(os.path.dirname(__file__), "..", "frontend", "dist")
 

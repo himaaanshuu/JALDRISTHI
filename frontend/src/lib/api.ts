@@ -361,6 +361,108 @@ export interface LLMMapResponse {
   visualization?: VisualizationAction;
 }
 
+// ─── Assessment Year API ─────────────────────────────────────────────────────
+
+export interface AssessmentYearInfo {
+  year: number;
+  available: boolean;
+  record_count: number;
+}
+
+export interface AssessmentYearsResponse {
+  requested_range: number[];
+  years: AssessmentYearInfo[];
+  latest_verified: number | null;
+}
+
+export function getAssessmentYears(): Promise<AssessmentYearsResponse> {
+  return fetchJson<AssessmentYearsResponse>('/api/groundwater/assessment-years');
+}
+
+export function getOverviewYear(year?: number): Promise<OverviewData & { year?: number; data_available: boolean }> {
+  const params = year ? `?year=${year}` : '';
+  return fetchJson(`/api/groundwater/overview-year${params}`);
+}
+
+export interface YearCompareSummary {
+  avg_stage_y1: number;
+  avg_stage_y2: number;
+  stage_change: number;
+  pct_change: number;
+  total_extraction_y1: number;
+  total_extraction_y2: number;
+  ext_change: number;
+  total_recharge_y1: number;
+  total_recharge_y2: number;
+  rech_change: number;
+  blocks_compared: number;
+  improvements: number;
+  deteriorations: number;
+  unchanged: number;
+  improvements_cat: number;
+  deteriorations_cat: number;
+  overall_trend: string;
+}
+
+export interface BlockChange {
+  block: string;
+  district: string;
+  stage_y1: number;
+  stage_y2: number;
+  stage_change: number;
+  cat_y1: string;
+  cat_y2: string;
+  ext_y1: number;
+  ext_y2: number;
+  ext_change: number;
+  rech_y1: number;
+  rech_y2: number;
+}
+
+export interface YearCompareResponse {
+  state: string;
+  year1: number;
+  year2: number;
+  data_y1_available: boolean;
+  data_y2_available: boolean;
+  summary: YearCompareSummary;
+  block_changes: BlockChange[];
+}
+
+export function getYearCompare(state: string, year1: number, year2: number): Promise<YearCompareResponse> {
+  return fetchJson(`/api/groundwater/year-compare?state=${encodeURIComponent(state)}&year1=${year1}&year2=${year2}`);
+}
+
+export interface YearSummary {
+  year: number;
+  blocks: number;
+  avg_stage: number;
+  categories: Record<string, number>;
+  dominant_category: string;
+}
+
+export interface StatusTransition {
+  from_year: number;
+  to_year: number;
+  from_category: string;
+  to_category: string;
+  from_avg_stage: number;
+  to_avg_stage: number;
+  stage_change: number;
+  status: string;
+}
+
+export interface StatusTransitionsResponse {
+  state: string;
+  year_summaries: YearSummary[];
+  transitions: StatusTransition[];
+  years_available: number[];
+}
+
+export function getStatusTransitions(state: string): Promise<StatusTransitionsResponse> {
+  return fetchJson(`/api/groundwater/status-transitions?state=${encodeURIComponent(state)}`);
+}
+
 // ─── District Data ───────────────────────────────────────────────────────────
 
 export function getDistrictData(state: string): Promise<{ districts: any[] }> {
