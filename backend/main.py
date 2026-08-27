@@ -2135,6 +2135,7 @@ def chat(req: ChatRequest, db: Session = Depends(get_db)):
 class LLMChatRequest(BaseModel):
     message: str
     top_k: int = 5
+    language: str = "english"  # "english" or "hindi"
 
 
 class LLMSource(BaseModel):
@@ -2156,7 +2157,7 @@ def llm_chat(req: LLMChatRequest):
     from rag import get_rag_engine, LLM_MODEL
 
     engine = get_rag_engine()
-    result = engine.generate(req.message, top_k=req.top_k)
+    result = engine.generate(req.message, top_k=req.top_k, language=req.language)
 
     sources = [
         LLMSource(

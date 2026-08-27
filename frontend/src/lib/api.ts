@@ -77,10 +77,11 @@ export interface LLMChatApiResponse {
 export function sendLLMChatMessage(
   message: string,
   top_k: number = 5,
+  language: string = "english",
 ): Promise<LLMChatApiResponse> {
   return fetchJson<LLMChatApiResponse>("/api/llm/chat", {
     method: "POST",
-    body: JSON.stringify({ message, top_k }),
+    body: JSON.stringify({ message, top_k, language }),
   });
 }
 

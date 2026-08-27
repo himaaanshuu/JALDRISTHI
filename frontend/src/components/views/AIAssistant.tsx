@@ -77,6 +77,7 @@ export default function AIAssistant() {
   const [loading, setLoading] = useState(false);
   const [chatMode, setChatMode] = useState<ChatMode>("rule");
   const [llmHealth, setLlmHealth] = useState<LLMHealthResponse | null>(null);
+  const [language, setLanguage] = useState<"english" | "hindi">("english");
   const threadRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -116,7 +117,7 @@ export default function AIAssistant() {
 
     try {
       if (chatMode === "llm" && isLLMAvailable) {
-        const llmData = await sendLLMChatMessage(text);
+        const llmData = await sendLLMChatMessage(text, 5, language);
         const aiMsg: Message = {
           id: nextId(),
           role: "ai",
@@ -233,6 +234,22 @@ export default function AIAssistant() {
               {!isLLMAvailable && <span className="mode-badge-off">OFF</span>}
               {isLLMAvailable && <span className="mode-badge-on">ON</span>}
             </button>
+            {chatMode === "llm" && isLLMAvailable && (
+              <div className="lang-toggle">
+                <button
+                  className={`lang-btn ${language === "english" ? "active" : ""}`}
+                  onClick={() => setLanguage("english")}
+                >
+                  EN
+                </button>
+                <button
+                  className={`lang-btn ${language === "hindi" ? "active" : ""}`}
+                  onClick={() => setLanguage("hindi")}
+                >
+                  हिंदी
+                </button>
+              </div>
+            )}
           </div>
 
           <div className="assist-thread" ref={threadRef}>
