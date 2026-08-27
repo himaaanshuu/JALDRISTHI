@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, useRef, type ReactNode } from "react";
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "../../lib/supabase";
 
@@ -21,6 +21,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [profileComplete, setProfileComplete] = useState(false);
+  const initialSessionChecked = useRef(false);
 
   const checkProfile = async (userId: string) => {
     try {
@@ -36,18 +37,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
+    // Get session first
     supabase.auth.getSession().then(({ data: { session: s } }) => {
       setSession(s);
       setUser(s?.user ?? null);
       if (s?.user) checkProfile(s.user.id);
+      initialSessionChecked.current = true;
       setLoading(false);
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: string, s: Session | null) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event: string, s: Session | null) => {
+      // Ignore SIGNED_OUT before initial session is loaded
+      if (!initialSessionChecked.current && event === "SIGNED_OUT") {
+        return;
+      }
       setSession(s);
       setUser(s?.user ?? null);
       if (s?.user) checkProfile(s.user.id);
       else setProfileComplete(false);
+      if (!initialSessionChecked.current) {
+        initialSessionChecked.current = true;
+        setLoading(false);
+      }
     });
 
     return () => subscription.unsubscribe();
