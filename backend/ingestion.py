@@ -5,7 +5,6 @@ Supports CGWB, IMD, CWC, and state-level data sources.
 
 import json
 import os
-import sqlite3
 import logging
 from abc import ABC, abstractmethod
 from typing import Dict, List, Optional, Any
@@ -55,40 +54,73 @@ class BaseIngestionAdapter(ABC):
             records = self.fetch()
             logger.info(f"Fetched {len(records)} records from {self.dataset_id()}")
 
-            conn = sqlite3.connect(DB_PATH)
-            c = conn.cursor()
+            from config import USE_SUPABASE
 
-            for record in records:
-                total += 1
-                try:
-                    if not self.validate(record):
+            if USE_SUPABASE:
+                from supabase_client import sb_insert, sb_upsert, sb_count
+                stored = 0
+                for record in records:
+                    total += 1
+                    try:
+                        if not self.validate(record):
+                            rejected += 1
+                            continue
+                        normalized = self.normalize(record)
+                        sb_insert("groundwater", normalized)
+                        stored += 1
+                    except Exception as e:
                         rejected += 1
-                        continue
+                        errors.append(f"Record {total}: {str(e)[:100]}")
 
-                    normalized = self.normalize(record)
-                    self._store(c, normalized)
+                # Update dataset version
+                try:
+                    sb_upsert("dataset_versions", {
+                        "dataset_id": self.dataset_id(),
+                        "dataset_name": self.dataset_name(),
+                        "year": record.get("year", datetime.now().year),
+                        "geographic_scope": record.get("geographic_scope", "India"),
+                        "ingestion_date": datetime.now().isoformat(),
+                        "version": "1.0",
+                        "status": "completed" if not errors else "partial",
+                        "record_count": total - rejected,
+                        "quality_status": "validated" if not errors else "errors_found",
+                    }, on_conflict="dataset_id")
                 except Exception as e:
-                    rejected += 1
-                    errors.append(f"Record {total}: {str(e)[:100]}")
+                    logger.warning(f"Failed to update dataset version: {e}")
+            else:
+                import sqlite3
+                conn = sqlite3.connect(DB_PATH)
+                c = conn.cursor()
 
-            # Update dataset version
-            c.execute("""
-                INSERT OR REPLACE INTO dataset_versions
-                (dataset_id, dataset_name, year, geographic_scope, ingestion_date, version, status, record_count, quality_status)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (
-                self.dataset_id(), self.dataset_name(),
-                record.get("year", datetime.now().year),
-                record.get("geographic_scope", "India"),
-                datetime.now().isoformat(),
-                "1.0",
-                "completed" if not errors else "partial",
-                total - rejected,
-                "validated" if not errors else "errors_found"
-            ))
+                for record in records:
+                    total += 1
+                    try:
+                        if not self.validate(record):
+                            rejected += 1
+                            continue
+                        normalized = self.normalize(record)
+                        self._store(c, normalized)
+                    except Exception as e:
+                        rejected += 1
+                        errors.append(f"Record {total}: {str(e)[:100]}")
 
-            conn.commit()
-            conn.close()
+                c.execute("""
+                    INSERT OR REPLACE INTO dataset_versions
+                    (dataset_id, dataset_name, year, geographic_scope, ingestion_date, version, status, record_count, quality_status)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """, (
+                    self.dataset_id(), self.dataset_name(),
+                    record.get("year", datetime.now().year),
+                    record.get("geographic_scope", "India"),
+                    datetime.now().isoformat(),
+                    "1.0",
+                    "completed" if not errors else "partial",
+                    total - rejected,
+                    "validated" if not errors else "errors_found"
+                ))
+
+                conn.commit()
+                conn.close()
 
             return IngestionResult(
                 dataset_id=self.dataset_id(),
@@ -271,42 +303,62 @@ def validate_groundwater_record(record: Dict) -> List[str]:
 
 def run_validation_report():
     """Generate a data quality validation report."""
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
+    from config import USE_SUPABASE
 
     report = {
         "timestamp": datetime.now().isoformat(),
         "total_records": 0,
         "valid_records": 0,
-        "issues": [],
+        "issues": {},
     }
 
-    c.execute("SELECT COUNT(*) FROM groundwater")
-    report["total_records"] = c.fetchone()[0]
+    if USE_SUPABASE:
+        from supabase_client import sb_select
+        rows = sb_select("groundwater")
+        blocks = [r for r in rows if r.get("block")]
+        report["total_records"] = len(blocks)
+        issues = {"missing_state": 0, "impossible_stage": 0, "extraction_exceeds_recharge": 0, "missing_coords": 0}
+        valid = 0
+        for r in blocks:
+            is_valid = True
+            if not r.get("state"):
+                issues["missing_state"] += 1
+                is_valid = False
+            ext = r.get("groundwater_extraction", 0) or 0
+            rech = r.get("annual_groundwater_recharge", 0) or 0
+            if rech and ext > rech * 2:
+                issues["extraction_exceeds_recharge"] += 1
+                is_valid = False
+            if is_valid:
+                valid += 1
+        report["valid_records"] = valid
+        report["issues"] = issues
+    else:
+        import sqlite3
+        conn = sqlite3.connect(DB_PATH)
+        c = conn.cursor()
+        c.execute("SELECT COUNT(*) FROM groundwater")
+        report["total_records"] = c.fetchone()[0]
+        c.execute("""
+            SELECT id, state, district, block, extraction_stage,
+                   groundwater_extraction, annual_groundwater_recharge
+            FROM groundwater WHERE block != ''
+        """)
+        issues = {"missing_state": 0, "impossible_stage": 0, "extraction_exceeds_recharge": 0, "missing_coords": 0}
+        for row in c.fetchall():
+            valid = True
+            if not row[1]:
+                issues["missing_state"] += 1
+                valid = False
+            if row[5] and row[6] and row[5] > row[6] * 2:
+                issues["extraction_exceeds_recharge"] += 1
+                valid = False
+            if valid:
+                report["valid_records"] += 1
+        report["issues"] = issues
+        conn.close()
 
-    c.execute("""
-        SELECT id, state, district, block, extraction_stage,
-               groundwater_extraction, annual_groundwater_recharge
-        FROM groundwater WHERE block != ''
-    """)
-
-    issues = {"missing_state": 0, "impossible_stage": 0, "extraction_exceeds_recharge": 0, "missing_coords": 0}
-
-    for row in c.fetchall():
-        valid = True
-        if not row[1]:
-            issues["missing_state"] += 1
-            valid = False
-        if row[5] and row[6] and row[5] > row[6] * 2:
-            issues["extraction_exceeds_recharge"] += 1
-            valid = False
-        if valid:
-            report["valid_records"] += 1
-
-    report["issues"] = issues
     report["quality_score"] = round(report["valid_records"] / max(report["total_records"], 1) * 100, 1)
-
-    conn.close()
     return report
 
 

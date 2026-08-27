@@ -2,62 +2,21 @@
 
 **Groundwater Intelligence Platform for India**
 
-जलदृष्टि DRISTI is a comprehensive groundwater assessment and monitoring platform covering all 36 states and union territories of India. It integrates official CGWB/IN-GRES data with a fully functional AI chat assistant, interactive map, trend analytics, risk scoring, and a bilingual learning center — all in a single deployable application.
+जलदृष्टि DRISTI is a comprehensive groundwater assessment and monitoring platform covering all 36 states and union territories of India. It integrates official CGWB/IN-GRES data with an AI-powered chat assistant "Jaladhi", interactive map, trend analytics, risk scoring, and a bilingual learning center — deployed on Supabase PostgreSQL.
 
 ---
 
 ## Features
 
-- **Interactive Map** — Leaflet-based map with 192+ groundwater blocks color-coded by category (Safe, Semi-Critical, Critical, Over-Exploited), restricted to Indian boundaries
-- **AI Chat Assistant** — Fully functional chat with natural language queries in English, Hindi, and Hinglish. 9+ intent types: status, compare, risk, top blocks, trend, category, greeting, search, export. Evidence citations and suggested follow-ups in every response
-- **Trend Analytics** — Area chart showing extraction, recharge, and stage trends across 4 assessment years (2020, 2022, 2024, 2025)
-- **Risk Analysis** — AI-derived risk scores for each block based on extraction stage, recharge deficit, and multi-year trends
+- **Jaladhi AI Assistant** — Professional bilingual (English/Hindi) conversational assistant powered by Ollama LLM with hybrid RAG pipeline (TF-IDF retrieval + structured SQL data). Streaming responses, conversation memory, and 16 query types
+- **Interactive Map** — Leaflet-based map with groundwater blocks color-coded by category (Safe, Semi-Critical, Critical, Over-Exploited), restricted to Indian boundaries
+- **Trend Analytics** — Area chart showing extraction, recharge, and stage trends across assessment years
+- **Risk Analysis** — AI-derived risk scores (0–100) for each state based on extraction stage, category distribution, historical trends, and risk concentration
 - **Data Provenance** — Full source tracking with official data import, validation reports, and evidence citations
-- **Groundwater Learning Center** — Bilingual (English + Hindi) educational section covering measurement units (BCM, MCM, ham, m³), extraction stage formulas, core concepts, aquifer basics, and India usage breakdown
-- **Bilingual Design** — Hindi + English typography with Noto Sans Devanagari, Inter, IBM Plex Mono, and Bebas Neue (display)
-- **State & District Coverage** — 914 total records (522 official + 392 district-level) across all 36 states/UTs, 4 assessment years, 8 categories
-- **Editorial Hero Design** — Dramatic full-viewport typography with metadata labels, inspired by premium editorial layouts
-
----
-
-## Architecture
-
-```
-jaldrishti/
-├── backend/
-│   ├── main.py                  # FastAPI application (21+ endpoints)
-│   ├── database.py              # SQLAlchemy models (GroundWater, DataSource, Evidence)
-│   ├── parser.py                # Intent parser (English/Hindi/Hinglish)
-│   ├── requirements.txt         # Python dependencies
-│   ├── test_parser.py           # 42 unit tests for parser
-│   └── scripts/
-│       ├── import_ingres_data.py    # Data ingestion from OpenCity.in
-│       └── validate_ingres_data.py  # Data quality validation
-├── frontend/
-│   ├── src/
-│   │   ├── App.tsx              # App shell with view routing
-│   │   ├── App.css              # Design system (CSS variables, typography scale, spacing)
-│   │   ├── components/
-│   │   │   ├── Sidebar.tsx      # Bilingual navigation (English + Hindi)
-│   │   │   ├── Topbar.tsx       # Search input, year selector, AI button
-│   │   │   ├── IndiaLeafletMap.tsx  # Leaflet interactive map (react-leaflet)
-│   │   │   ├── IndiaMap.tsx     # SVG India map (alternate)
-│   │   │   └── views/
-│   │   │       ├── Overview.tsx     # Dashboard with KPI cards + map + editorial hero
-│   │   │       ├── AIAssistant.tsx  # Fully functional chat interface
-│   │   │       ├── MapView.tsx      # Full-screen Leaflet map
-│   │   │       ├── Analytics.tsx    # Trends and rankings
-│   │   │       ├── Compare.tsx      # Year-over-year comparison
-│   │   │       ├── Reports.tsx      # Report generation
-│   │   │       ├── DataSources.tsx  # Data provenance
-│   │   │       └── Learning.tsx     # Groundwater knowledge center (bilingual)
-│   │   ├── data/states.ts       # State data types and coordinates
-│   │   └── lib/api.ts           # API client (fetchJson, sendChatMessage)
-│   └── index.html               # Google Fonts (Bebas Neue, Noto Sans Devanagari, Inter, IBM Plex Mono)
-├── data/                        # SQLite database (gitignored)
-├── .env                         # Environment variables (gitignored)
-└── README.md
-```
+- **Groundwater Learning Center** — Bilingual educational content covering measurement units, extraction stage formulas, aquifer basics, and India usage breakdown
+- **Bilingual Design** — Hindi + English typography with Noto Sans Devanagari, Inter, IBM Plex Mono, and Bebas Neue
+- **State & District Coverage** — 912+ records across all 36 states/UTs, multiple assessment years
+- **Supabase Backend** — PostgreSQL database hosted on Supabase with REST API, row-level security, and real-time capabilities
 
 ---
 
@@ -68,13 +27,66 @@ jaldrishti/
 | Frontend | React 19, TypeScript, Vite |
 | Map | react-leaflet, Leaflet, CartoDB dark tiles |
 | Backend | FastAPI, SQLAlchemy, Pydantic |
-| Database | SQLite |
+| Database | **Supabase PostgreSQL** (hosted) |
 | Data Source | CGWB/IN-GRES via OpenCity.in CKAN API |
+| AI/LLM | Ollama (llama3.1:8b), TF-IDF retrieval, hybrid RAG |
+| Query Engine | Geo resolver, query router, numeric calculator |
 | Display Font | Bebas Neue (editorial headlines) |
-| Hindi Font | Noto Sans Devanari (300–700) |
+| Hindi Font | Noto Sans Devanagari (300–700) |
 | English Font | Inter (300–800) |
 | Data Font | IBM Plex Mono (400–600) |
 | Env Config | python-dotenv |
+
+---
+
+## Architecture
+
+```
+jaldrishti/
+├── backend/
+│   ├── main.py                  # FastAPI app (36+ endpoints, streaming, CORS)
+│   ├── database.py              # SQLAlchemy models (7 tables)
+│   ├── config.py                # Centralized configuration
+│   ├── smart_chat.py            # Hybrid SQL+RAG chat pipeline
+│   ├── rag.py                   # RAG engine (TF-IDF + Ollama, 36+ knowledge docs)
+│   ├── parser.py                # Intent parser (English/Hindi/Hinglish)
+│   ├── geo_resolver.py          # Geographic entity resolution (36 states, 100+ districts)
+│   ├── query_router.py          # Intent classification (16 query types)
+│   ├── numeric_calc.py          # Backend calculations (comparisons, trends, rankings)
+│   ├── ingestion.py             # Data ingestion framework (CGWB adapters)
+│   ├── supabase_client.py       # Supabase REST API client
+│   ├── requirements.txt         # Python dependencies
+│   ├── test_comprehensive.py    # 108 automated tests (7 groups)
+│   └── scripts/
+│       ├── migrate_supabase.sql     # Supabase schema migration
+│       ├── migrate_to_supabase.py   # SQLite → Supabase data migration
+│       ├── import_ingres_data.py    # Data ingestion from OpenCity.in
+│       └── validate_ingres_data.py  # Data quality validation
+├── frontend/
+│   ├── src/
+│   │   ├── App.tsx              # App shell with view routing
+│   │   ├── App.css              # Design system (CSS variables, typography scale)
+│   │   ├── components/
+│   │   │   ├── Sidebar.tsx      # Bilingual navigation ("Jaladhi" / "जलाधि")
+│   │   │   ├── Topbar.tsx       # Search input, year selector, AI button
+│   │   │   ├── IndiaLeafletMap.tsx  # Leaflet interactive map
+│   │   │   └── views/
+│   │   │       ├── Overview.tsx     # Dashboard with KPI cards + map
+│   │   │       ├── AIAssistant.tsx  # Jaladhi chat with streaming
+│   │   │       ├── MapView.tsx      # Full-screen Leaflet map
+│   │   │       ├── Analytics.tsx    # Trends and rankings
+│   │   │       ├── Compare.tsx      # Year-over-year comparison
+│   │   │       ├── Reports.tsx      # Report generation
+│   │   │       ├── DataSources.tsx  # Data provenance
+│   │   │       └── Learning.tsx     # Groundwater knowledge center
+│   │   ├── data/states.ts       # State data types and coordinates
+│   │   └── lib/api.ts           # API client (smart chat, streaming, groundwater data)
+│   └── index.html               # Google Fonts
+├── data/                        # SQLite database (fallback, gitignored)
+├── .env                         # Environment variables (gitignored)
+├── .env.example                 # Template for environment setup
+└── README.md
+```
 
 ---
 
@@ -83,6 +95,8 @@ jaldrishti/
 - **Python 3.10+** (tested with Python 3.14)
 - **Node.js 18+** and npm
 - **Git**
+- **Ollama** (for AI chat) — https://ollama.ai
+- **Supabase account** (free tier works) — https://supabase.com
 
 ---
 
@@ -108,7 +122,75 @@ source venv/bin/activate   # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-### 3. Set up the frontend
+### 3. Set up Supabase
+
+1. Create a free account at https://supabase.com
+2. Create a new project (any name, any region)
+3. Go to **Settings → API** and copy:
+   - **Project URL** (e.g., `https://your-project.supabase.co`)
+   - **Anon/Publishable Key** (starts with `eyJ...`)
+4. Go to **Settings → Database** and copy the **Database Password**
+5. Go to **SQL Editor** and run the migration:
+
+```sql
+-- Paste the contents of backend/scripts/migrate_supabase.sql
+-- Or run it directly from the file
+```
+
+6. Create your `.env` file:
+
+```bash
+cp .env.example .env
+# Edit .env with your Supabase credentials
+```
+
+Your `.env` should look like:
+
+```env
+# Backend
+DATABASE_URL=sqlite:///data/jaldrishti.db
+CORS_ORIGINS=http://localhost:5173,http://localhost:8000
+HOST=0.0.0.0
+PORT=8000
+DEBUG=true
+
+# LLM (Ollama)
+OLLAMA_BIN=/Applications/Ollama.app/Contents/Resources/ollama
+LLM_MODEL=llama3.1:8b
+
+# Frontend
+VITE_API_URL=http://localhost:8000
+
+# Supabase
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_ANON_KEY=your-anon-key-here
+SUPABASE_DB_PASSWORD=your-db-password-here
+USE_SUPABASE=true
+```
+
+7. Migrate data from SQLite to Supabase:
+
+```bash
+cd backend
+PYTHONPATH=. python3 scripts/migrate_to_supabase.py
+```
+
+### 4. Set up Ollama (for AI chat)
+
+```bash
+# Install Ollama
+brew install ollama  # macOS
+# Or download from https://ollama.ai
+
+# Pull the model
+ollama pull llama3.1:8b
+
+# Start Ollama
+ollama serve
+# Or open /Applications/Ollama.app on macOS
+```
+
+### 5. Set up the frontend
 
 ```bash
 cd ../frontend
@@ -118,13 +200,6 @@ npm install
 
 # Build for production
 npm run build
-```
-
-### 4. Import data (optional — a fresh database is created on first run)
-
-```bash
-cd ../backend
-python3 -m scripts.import_ingres_data
 ```
 
 ---
@@ -162,89 +237,104 @@ python3 -m uvicorn main:app --host 0.0.0.0 --port 8000
 
 ## Environment Variables
 
-Copy `.env` or create your own:
-
-```bash
-# Backend
-DATABASE_URL=sqlite:///data/jaldrishti.db
-CORS_ORIGINS=http://localhost:5173,http://localhost:8000
-HOST=0.0.0.0
-PORT=8000
-DEBUG=true
-
-# LLM (Ollama)
-OLLAMA_BIN=/Applications/Ollama.app/Contents/Resources/ollama
-LLM_MODEL=llama3.1:8b
-
-# Frontend
-VITE_API_URL=http://localhost:8000
-```
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `DATABASE_URL` | SQLite fallback path | `sqlite:///data/jaldrishti.db` |
+| `CORS_ORIGINS` | Allowed CORS origins | `http://localhost:5173` |
+| `HOST` | Server host | `0.0.0.0` |
+| `PORT` | Server port | `8000` |
+| `OLLAMA_BIN` | Path to Ollama binary | `/Applications/Ollama.app/Contents/Resources/ollama` |
+| `LLM_MODEL` | Ollama model name | `llama3.1:8b` |
+| `VITE_API_URL` | Backend API URL for frontend | `http://localhost:8000` |
+| `SUPABASE_URL` | Supabase project URL | — |
+| `SUPABASE_ANON_KEY` | Supabase anon/publishable key | — |
+| `SUPABASE_DB_PASSWORD` | Supabase database password | — |
+| `USE_SUPABASE` | Enable Supabase (true/false) | `false` |
 
 ---
 
 ## API Endpoints
 
+### Core
 | Endpoint | Method | Description |
 |----------|--------|-------------|
 | `/api/health` | GET | Health check |
-| `/api/blocks` | GET | All groundwater blocks with coordinates |
-| `/api/states` | GET | State-level summary |
-| `/api/data/categories` | GET | Category distribution |
-| `/api/data/trend` | GET | Multi-year trend data |
-| `/api/data/top-extraction` | GET | Top extraction blocks |
-| `/api/data/coverage` | GET | Data coverage stats (records, recharge, extraction, stage) |
-| `/api/data/sources` | GET | Data sources & provenance |
-| `/api/risk/blocks` | GET | Risk scores for all blocks |
-| `/api/data/search` | GET | Search groundwater data |
-| `/api/data/export` | GET | Export as CSV |
-| `/api/chat` | POST | AI chat with natural language queries |
-| `/api/chat/parse` | POST | Parse intent without querying DB |
-| `/api/llm/chat` | POST | LLM-powered chat (Ollama RAG) |
-| `/api/llm/health` | GET | Check Ollama availability |
-| `/api/llm/rebuild` | POST | Rebuild RAG knowledge base |
+| `/api/dashboard/stats` | GET | Dashboard statistics |
+| `/api/data/coverage` | GET | Data coverage stats |
 
----
-
-## LLM Integration (Ollama)
-
-जलदृष्टि DRISTI includes a local LLM integration powered by Ollama for conversational groundwater intelligence.
-
-**Setup:**
-1. Install Ollama from https://ollama.ai
-2. Pull the model: `ollama pull llama3.1:8b`
-3. Start Ollama: `open /Applications/Ollama.app`
-4. The backend automatically connects to Ollama at `localhost:11434`
-
-**Architecture:**
-- **Retrieval**: TF-IDF vector search over 33+ knowledge documents (domain KB + database records)
-- **Generation**: Ollama llama3.1:8b for response generation
-- **Knowledge Base**: Covers aquifer types, extraction stages, CGWB categories, contamination issues, government policies, measurement units, and state-specific data
-- **Database Integration**: Real-time queries to SQLite for state/district/block data
-
-**Endpoints:**
+### Groundwater Data
 | Endpoint | Method | Description |
 |----------|--------|-------------|
-| `/api/llm/chat` | POST | Chat with LLM (params: `message`, `top_k`) |
-| `/api/llm/health` | GET | Check Ollama status and model availability |
-| `/api/llm/rebuild` | POST | Rebuild knowledge base after DB updates |
+| `/api/states` | GET | State-level summary |
+| `/api/districts` | GET | District-level data |
+| `/api/blocks` | GET | Block-level data with coordinates |
+| `/api/assessments` | GET | Assessment records (filtered) |
+| `/api/assessment/latest` | GET | Latest year assessments |
+| `/api/assessment/history` | GET | Block assessment history |
 
-**Frontend Mode Toggle:**
-The AI Assistant includes a toggle between Rule-Based (fast, deterministic) and LLM (conversational, context-aware) modes.
+### Analytics
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/analytics/category-distribution` | GET | Category distribution |
+| `/api/analytics/top-extraction` | GET | Top extraction blocks |
+| `/api/analytics/trend` | GET | Multi-year trend data |
+| `/api/analytics/what-changed` | GET | Year-over-year changes |
+| `/api/analytics/risk-score` | GET | AI-derived risk scores |
+
+### AI Chat (Jaladhi)
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/smart/chat` | POST | Smart chat (SQL + RAG hybrid) |
+| `/api/smart/chat/stream` | POST | Streaming smart chat (SSE) |
+| `/api/chat` | POST | Legacy chat endpoint |
+| `/api/llm/chat` | POST | Direct LLM chat |
+| `/api/llm/health` | GET | Check Ollama availability |
 
 ---
 
-## AI Chat (Rule-Based)
+## Jaladhi AI Assistant
 
-The AI assistant accepts natural language queries and returns structured responses with data, evidence, and follow-up suggestions.
+Jaladhi is the intelligent groundwater assistant built into the platform.
 
-**Supported intents:** greeting, status, compare, top_extraction, critical_areas, trend, category, location, what_changed
+**Capabilities:**
+- Natural language queries in English, Hindi, and Hinglish
+- 16 query types: greeting, state_status, comparison, ranking, trend, category, district_status, block_status, quality, level, recommendation, regulatory, extraction, recharge, what_changed, general
+- Geographic entity resolution for 36 states, 100+ districts, abbreviations, and Hindi names
+- Backend calculations for comparisons, trends, and rankings (LLM never does arithmetic)
+- Streaming responses via Server-Sent Events (SSE)
+- Conversation memory for follow-up questions
+- Professional structured output: Introduction → Key Findings → Conclusion
 
 **Example queries:**
 - "What is the groundwater status of Punjab?"
-- "Compare Haryana between 2020 and 2024."
-- "Which districts have the highest extraction?"
-- "Show over-exploited areas in Rajasthan."
+- "Compare Delhi and Karnataka"
+- "Which states have the highest extraction?"
+- "Show trends in groundwater extraction for Maharashtra"
 - "राजस्थान की भूजल स्थिति बताओ" (Hindi)
+- "पंजाब और हरियाणा की तुलना करो" (Hindi)
+
+---
+
+## Database Schema
+
+### Supabase Tables
+
+| Table | Records | Description |
+|-------|---------|-------------|
+| `groundwater` | 912 | Core assessment data (state, district, block, extraction, stage, category) |
+| `data_sources` | 4 | Source tracking (CGWB, IN-GRES) |
+| `water_readings` | 40 | Sensor/monitoring data |
+| `groundwater_quality` | 0 | Quality parameters (fluoride, arsenic, nitrate, etc.) |
+| `groundwater_levels` | 0 | Pre/post monsoon water levels |
+| `conversation_history` | — | Chat session memory |
+| `dataset_versions` | — | Data ingestion tracking |
+
+### Indexes
+
+- `ix_gw_state_year` — State + assessment year lookups
+- `ix_gw_district_year` — District + year lookups
+- `ix_gw_category_state` — Category + state filtering
+- `ix_gw_state`, `ix_gw_district`, `ix_gw_block` — Individual column indexes
 
 ---
 
@@ -258,7 +348,7 @@ The AI assistant accepts natural language queries and returns structured respons
 | State-level import | 2022 | 37 | All states |
 | District-level additions | 2020–2025 | 392 | 24 states, 285 districts |
 
-**Total: 914 records** across 36 states, 285 districts, 192 blocks, 4 years.
+**Total: 912 records** across 36 states, 285 districts, 192 blocks, 4 years.
 
 Data sourced from **OpenCity.in** CKAN Datastore API with full provenance tracking.
 
@@ -266,149 +356,69 @@ Data sourced from **OpenCity.in** CKAN Datastore API with full provenance tracki
 
 ---
 
-## Learning Center
-
-The built-in **Groundwater Learning Center** (जलज्ञान) provides bilingual educational content:
-
-- **Measurement Units** — BCM, MCM, ham, m³, % with conversions and usage context
-- **Extraction Stage Formula** — `Stage (%) = (Extraction / Availability) × 100` with Safe/Semi-Critical/Critical/Over-Exploited ranges
-- **Core Concepts** — Recharge, Extraction Stage, Safe Category, Over-Exploited, Annual Recharge, Extractable Resource — each with Hindi definitions and real-world examples
-- **Aquifer Basics** — What is an aquifer, Water table, Declining water levels
-- **India Usage** — Irrigation (63%), Domestic (18%), Industrial (19%) breakdown
-
-All content is available in both English and Hindi (हिन्दी).
-
----
-
 ## Implementation Plan
 
-### Phase 1: Foundation
-- [x] Initialize FastAPI backend with SQLite + SQLAlchemy
-- [x] Define data models (`GroundWater`, `DataSource`, `WaterReading`, `Evidence`)
-- [x] Build core API endpoints (blocks, states, categories, health)
-- [x] Set up React + Vite + TypeScript frontend scaffold
+### Completed Phases
 
-### Phase 2: Data Integration
-- [x] Ingest official CGWB/IN-GRES data from OpenCity.in CKAN API
-- [x] Import state-level data for 2020 and 2022 (37 states each)
-- [x] Import district/block-level data for 2024 and 2025 (221 + 227 records)
-- [x] Add 392 district-level records across 24 states
-- [x] Fix data quality issues: filter summary rows, correct TN/TG swap, normalize state names
-- [x] Add `DataSource` model for full provenance tracking
-- [x] Add coordinates to 516 records for map display (192 blocks rendered)
-
-### Phase 3: Frontend — Dashboard & Map
-- [x] Build sidebar navigation with bilingual labels (English + Hindi)
-- [x] Create dashboard with KPI cards (mono-font labels, colored accent bars)
-- [x] Implement Leaflet interactive map with India bounds restriction
-- [x] Add CartoDB dark basemap tiles and category-colored markers
-- [x] Build state detail panel with extraction metrics and trend chart
-- [x] Make logo clickable to navigate to overview
-
-### Phase 4: AI Chat Assistant & Intelligence
-- [x] Build intent parser supporting English, Hindi, and Hinglish (9+ intents)
-- [x] Implement 33 known states/UTs + 6 years (2020–2025) recognition
-- [x] Build chat UI with Markdown rendering, evidence badges, risk scores
-- [x] Add Hindi/Hinglish translations in chat responses
-- [x] Implement intent handlers: status, compare, trend, risk, top blocks, category, help, search, export
-- [x] Add source citations to all chat responses
-- [x] Build AI-derived risk scoring (extraction stage + recharge deficit + multi-year trend)
-- [x] Wire up frontend to backend `/api/chat` endpoint with full state management
-- [x] Add loading states, follow-up chips, suggested queries sidebar
-
-### Phase 5: Analytics & Trend Features
-- [x] Build multi-year trend endpoint with 4 data points (2020, 2022, 2024, 2025)
-- [x] Create Recharts area chart (extraction, recharge, stage)
-- [x] Add insight bar with extraction change % and stage direction
-- [x] Filter trend data to state-level only for accurate cross-year comparison
-- [x] Implement top extraction ranking (latest year default, no duplicates)
-- [x] Build compare handler for year-over-year state comparison
-
-### Phase 6: Typography & Visual Identity
-- [x] Brand redesign: जलदृष्टि (Hindi) + DRISTI (English) + GROUNDWATER INTELLIGENCE
-- [x] Import Bebas Neue (display), Noto Sans Devanagari (Hindi), Inter (English), IBM Plex Mono (data)
-- [x] Build bilingual sidebar navigation with Hindi secondary labels
-- [x] Add bilingual eyebrow prefixes to all view headers
-- [x] Create CSS typography scale (--text-xs through --text-3xl)
-- [x] Create CSS spacing scale (--sp-1 through --sp-10)
-- [x] Apply consistent font-family across all components
-- [x] Redesign KPI cards with mono labels, colored accent bars, improved typography
-
-### Phase 7: Learning Center & Hindi Translations
-- [x] Build Groundwater Learning view with measurement units (BCM, MCM, ham, m³, %)
-- [x] Add extraction stage formula card with colored range boxes
-- [x] Create core concept cards with Hindi definitions and real-world examples
-- [x] Add aquifer basics section with Hindi translations
-- [x] Add India usage breakdown (irrigation/domestic/industrial) with Hindi
-- [x] Add Hindi translations throughout all learning content
-
-### Phase 8: Editorial Design & Polish
-- [x] Dramatic full-viewport hero typography (Bebas Neue, 110px)
-- [x] Editorial metadata labels (States, Districts, Data Source, Records)
-- [x] Hindi subtitle with opacity hierarchy
-- [x] Responsive design for mobile (42px title, wrapping meta)
-
-### Phase 9: Deployment
-- [x] Add static file serving to FastAPI for production deployment
-- [x] Add environment variable configuration with python-dotenv
-- [x] Write comprehensive README with clone instructions
-- [ ] Deploy with ngrok or similar tunneling for shareable access
-
-### Phase 10: LLM Integration (Ollama)
-- [x] Install Ollama + pull llama3.1:8b model
-- [x] Create RAG pipeline with TF-IDF retrieval + Ollama generation
-- [x] Build 33-document knowledge base (aquifers, contamination, policies, state data)
-- [x] Add SQLite DB integration for real-time state/district/block queries
-- [x] Add /api/llm/chat, /api/llm/health, /api/llm/rebuild endpoints
-- [x] Frontend mode toggle (Rule-Based / LLM)
-- [x] Language selector (English / Hindi) for pure language responses
-- [x] Optimized for speed: HTTP API instead of subprocess, 2048 context
-
----
-
-## Implementation Plan — What's Next
+| Phase | Status | Description |
+|-------|--------|-------------|
+| Phase 1: Foundation | ✅ | FastAPI backend, SQLAlchemy models, React+Vite frontend |
+| Phase 2: Data Integration | ✅ | CGWB/IN-GRES data ingestion, 912 records, provenance tracking |
+| Phase 3: Dashboard & Map | ✅ | Leaflet map, KPI cards, state detail panels |
+| Phase 4: AI Chat Assistant | ✅ | Intent parser, 9+ intents, Hindi/English/Hinglish |
+| Phase 5: Analytics | ✅ | Multi-year trends, risk scoring, comparisons |
+| Phase 6: Typography | ✅ | Bilingual design system, Bebas Neue, Noto Sans Devanagari |
+| Phase 7: Learning Center | ✅ | Bilingual educational content, measurement units |
+| Phase 8: Editorial Design | ✅ | Full-viewport hero, metadata labels |
+| Phase 9: Deployment | ✅ | Static file serving, environment config |
+| Phase 10: LLM Integration | ✅ | Ollama + RAG pipeline, 36+ knowledge docs |
+| Phase 11: Jaladhi Rename | ✅ | Sidebar, topbar, chat header rebranded |
+| Phase 12: Source Count Fix | ✅ | Improved retrieval, Hindi keyword mapping |
+| Phase 13: Production Upgrade | ✅ | Geo resolver, query router, numeric calc, streaming |
+| Phase 14: Supabase Migration | ✅ | PostgreSQL on Supabase, REST API client, data migration |
 
 ### Currently Working
+
 | Feature | Status | Description |
 |---------|--------|-------------|
-| Interactive Map | ✅ Done | Leaflet map with 192 blocks, color-coded by category |
-| Rule-Based AI Chat | ✅ Done | 9+ intents, Hindi/English/Hinglish, evidence citations |
-| LLM AI Chat (Ollama) | ✅ Done | RAG pipeline, 33-doc knowledge base, pure Hindi/English |
+| Jaladhi AI Assistant | ✅ Done | LLM-only mode, streaming, bilingual |
+| Supabase Database | ✅ Done | 912 records on PostgreSQL |
+| Interactive Map | ✅ Done | Leaflet with category-colored markers |
 | Trend Analytics | ✅ Done | Multi-year extraction/recharge/stage charts |
 | Risk Scoring | ✅ Done | AI-derived 0-100 risk scores per state |
 | Learning Center | ✅ Done | Bilingual educational content |
-| Editorial Hero | ✅ Done | Bebas Neue typography, metadata bar |
-| Data Coverage | ✅ Done | 914 records, 36 states, 285 districts |
+| 108 Automated Tests | ✅ Done | Geo, router, calc, DB, SQL injection, hallucination |
 
-### Phase 11: Enhanced LLM Features (In Progress)
-- [ ] Streaming responses for real-time text display
-- [ ] Conversation memory (multi-turn context)
-- [ ] Auto-detect language from user input
-- [ ] Voice input support (Web Speech API)
-- [ ] Export chat history as PDF/Markdown
+### Upcoming Features
 
-### Phase 12: Advanced Analytics
+#### Phase 15: Water Quality & Levels
+- [ ] Groundwater quality data integration (fluoride, arsenic, nitrate, iron, TDS)
+- [ ] Pre/post monsoon water level tracking
+- [ ] Quality heatmap overlays on map
+- [ ] Contamination risk alerts
+
+#### Phase 16: Advanced Analytics
 - [ ] Predictive modeling — forecast extraction trends 5 years ahead
 - [ ] Anomaly detection — flag unusual extraction spikes
 - [ ] District-level heatmaps with drill-down
 - [ ] Water budget calculator — input area, get recharge/extraction estimates
 - [ ] Satellite data integration (NASA GRACE groundwater storage)
 
-### Phase 13: User Features
-- [ ] User authentication (JWT-based)
+#### Phase 17: User Features
+- [ ] User authentication (JWT-based via Supabase Auth)
 - [ ] Saved queries and bookmarks
 - [ ] Custom dashboards — pin favorite states/districts
 - [ ] Alert system — email/SMS when extraction crosses threshold
 - [ ] Compare tool — side-by-side state comparison
 
-### Phase 14: Data Expansion
+#### Phase 18: Data Expansion
 - [ ] Real-time CGWB data sync (webhook/API polling)
-- [ ] Water quality data integration (fluoride, arsenic, nitrate levels)
 - [ ] Rainfall data integration (IMD records)
 - [ ] Crop water requirement data (CGWB crop coefficient tables)
 - [ ] Borewell registration data (state-level)
+- [ ] Extensible ingestion framework for new data sources
 
-### Phase 15: Mobile & Deployment
+#### Phase 19: Mobile & Deployment
 - [ ] Progressive Web App (PWA) with offline support
 - [ ] React Native mobile app
 - [ ] Docker containerization
@@ -421,8 +431,35 @@ All content is available in both English and Hindi (हिन्दी).
 
 ```bash
 cd backend
+
+# Run all 108 tests
+python3 -m pytest test_comprehensive.py -v
+
+# Run specific test groups
+python3 -m pytest test_comprehensive.py -k "geo_resolution" -v
+python3 -m pytest test_comprehensive.py -k "query_router" -v
+python3 -m pytest test_comprehensive.py -k "numeric_calc" -v
+python3 -m pytest test_comprehensive.py -k "database_queries" -v
+python3 -m pytest test_comprehensive.py -k "sql_injection" -v
+python3 -m pytest test_comprehensive.py -k "hallucination" -v
+python3 -m pytest test_comprehensive.py -k "followup" -v
+
+# Run parser tests
 python3 -m pytest test_parser.py -v
 ```
+
+---
+
+## Forking & Contributing
+
+1. Fork the repository
+2. Create a feature branch: `git checkout -b feature/your-feature`
+3. Set up Supabase (free tier) and Ollama locally
+4. Make your changes
+5. Run tests: `python3 -m pytest test_comprehensive.py -v`
+6. Commit: `git commit -m "Add your feature"`
+7. Push: `git push origin feature/your-feature`
+8. Open a Pull Request
 
 ---
 

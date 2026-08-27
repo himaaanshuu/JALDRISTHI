@@ -5,7 +5,6 @@ Routes queries to SQL (for numbers) or RAG (for knowledge), aggregates context, 
 
 import json
 import os
-import sqlite3
 import requests
 from typing import Dict, List, Optional, Any, Tuple
 from dataclasses import dataclass, field
@@ -21,7 +20,7 @@ from config import (
     DB_PATH, OLLAMA_BASE_URL, OLLAMA_MODEL, OLLAMA_TIMEOUT,
     OLLAMA_NUM_CTX, OLLAMA_NUM_PREDICT, OLLAMA_TEMPERATURE,
     RAG_TOP_K, SYSTEM_PROMPT_EN, SYSTEM_PROMPT_HI,
-    LATEST_ASSESSMENT_YEAR, ASSESSMENT_YEARS
+    LATEST_ASSESSMENT_YEAR, ASSESSMENT_YEARS, USE_SUPABASE
 )
 
 
@@ -60,15 +59,33 @@ def get_session(session_id: str) -> ConversationState:
 
 # ─── SQL Data Retrieval ─────────────────────────────────────────────────────
 
-def _get_db():
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    return conn
+def _get_sb():
+    from supabase_client import (
+        fetch_state_data, fetch_state_latest, fetch_state_trend,
+        fetch_rankings, fetch_district_data, fetch_block_data,
+        fetch_overall_stats, fetch_category_distribution, fetch_what_changed
+    )
+    return {
+        "fetch_state_data": fetch_state_data,
+        "fetch_state_latest": fetch_state_latest,
+        "fetch_state_trend": fetch_state_trend,
+        "fetch_rankings": fetch_rankings,
+        "fetch_district_data": fetch_district_data,
+        "fetch_block_data": fetch_block_data,
+        "fetch_overall_stats": fetch_overall_stats,
+        "fetch_category_distribution": fetch_category_distribution,
+        "fetch_what_changed": fetch_what_changed,
+    }
 
 
 def _fetch_state_data(state: str, year: int = LATEST_ASSESSMENT_YEAR) -> Optional[Dict]:
     """Fetch state-level aggregated data."""
-    conn = _get_db()
+    if USE_SUPABASE:
+        from supabase_client import fetch_state_data
+        return fetch_state_data(state, year)
+    import sqlite3
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
     c = conn.cursor()
     c.execute("""
         SELECT state, assessment_year,
@@ -96,7 +113,12 @@ def _fetch_state_data(state: str, year: int = LATEST_ASSESSMENT_YEAR) -> Optiona
 
 def _fetch_state_latest(state: str) -> Optional[Dict]:
     """Fetch latest available data for a state."""
-    conn = _get_db()
+    if USE_SUPABASE:
+        from supabase_client import fetch_state_latest
+        return fetch_state_latest(state)
+    import sqlite3
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
     c = conn.cursor()
     c.execute("""
         SELECT assessment_year FROM groundwater
@@ -119,7 +141,6 @@ def _fetch_state_comparison(state_a: str, state_b: str, year: int = LATEST_ASSES
     if not data_a or not data_b:
         return {"error": "Data not available for one or both states"}
 
-    # Map SQL keys to compute_state_comparison expected keys
     def map_data(d):
         return {
             "annual_groundwater_recharge": d.get("total_recharge", 0),
@@ -134,21 +155,27 @@ def _fetch_state_comparison(state_a: str, state_b: str, year: int = LATEST_ASSES
 
 def _fetch_state_trend(state: str) -> Optional[Dict]:
     """Fetch multi-year trend for a state."""
-    conn = _get_db()
-    c = conn.cursor()
-    c.execute("""
-        SELECT assessment_year,
-            ROUND(SUM(groundwater_extraction), 2) as total_extraction,
-            ROUND(AVG(extraction_stage), 2) as avg_stage,
-            ROUND(SUM(annual_groundwater_recharge), 2) as total_recharge,
-            COUNT(DISTINCT block) as blocks_assessed
-        FROM groundwater
-        WHERE state = ? AND block != ''
-        GROUP BY assessment_year
-        ORDER BY assessment_year
-    """, (state,))
-    rows = [dict(r) for r in c.fetchall()]
-    conn.close()
+    if USE_SUPABASE:
+        from supabase_client import fetch_state_trend
+        rows = fetch_state_trend(state)
+    else:
+        import sqlite3
+        conn = sqlite3.connect(DB_PATH)
+        conn.row_factory = sqlite3.Row
+        c = conn.cursor()
+        c.execute("""
+            SELECT assessment_year,
+                ROUND(SUM(groundwater_extraction), 2) as total_extraction,
+                ROUND(AVG(extraction_stage), 2) as avg_stage,
+                ROUND(SUM(annual_groundwater_recharge), 2) as total_recharge,
+                COUNT(DISTINCT block) as blocks_assessed
+            FROM groundwater
+            WHERE state = ? AND block != ''
+            GROUP BY assessment_year
+            ORDER BY assessment_year
+        """, (state,))
+        rows = [dict(r) for r in c.fetchall()]
+        conn.close()
     if len(rows) < 2:
         return None
     return compute_trend(state, "avg_stage", "%", rows)
@@ -156,7 +183,12 @@ def _fetch_state_trend(state: str) -> Optional[Dict]:
 
 def _fetch_rankings(metric: str = "extraction_stage", limit: int = 10, state: str = None) -> List[Dict]:
     """Fetch state-level rankings."""
-    conn = _get_db()
+    if USE_SUPABASE:
+        from supabase_client import fetch_rankings
+        return fetch_rankings(limit)
+    import sqlite3
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
     c = conn.cursor()
     where = "WHERE block != ''"
     params = []
@@ -182,7 +214,14 @@ def _fetch_rankings(metric: str = "extraction_stage", limit: int = 10, state: st
 
 def _fetch_district_data(state: str, district: str = None) -> List[Dict]:
     """Fetch district-level data for a state."""
-    conn = _get_db()
+    if USE_SUPABASE:
+        from supabase_client import fetch_district_data, fetch_block_data
+        if district:
+            return fetch_block_data(state, district)
+        return fetch_district_data(state)
+    import sqlite3
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
     c = conn.cursor()
     if district:
         c.execute("""
@@ -211,7 +250,12 @@ def _fetch_district_data(state: str, district: str = None) -> List[Dict]:
 
 def _fetch_block_data(state: str, district: str = None, block: str = None) -> List[Dict]:
     """Fetch block-level data."""
-    conn = _get_db()
+    if USE_SUPABASE:
+        from supabase_client import fetch_block_data
+        return fetch_block_data(state, district)
+    import sqlite3
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
     c = conn.cursor()
     conditions = ["state = ?", "block != ''"]
     params = [state]
@@ -238,7 +282,12 @@ def _fetch_block_data(state: str, district: str = None, block: str = None) -> Li
 
 def _fetch_category_distribution(state: str = None) -> Dict:
     """Fetch category distribution."""
-    conn = _get_db()
+    if USE_SUPABASE:
+        from supabase_client import fetch_category_distribution
+        return fetch_category_distribution(state)
+    import sqlite3
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
     c = conn.cursor()
     if state:
         c.execute("""
@@ -263,7 +312,12 @@ def _fetch_category_distribution(state: str = None) -> Dict:
 
 def _fetch_overall_stats() -> Dict:
     """Fetch national-level overview."""
-    conn = _get_db()
+    if USE_SUPABASE:
+        from supabase_client import fetch_overall_stats
+        return fetch_overall_stats()
+    import sqlite3
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
     c = conn.cursor()
     c.execute("""
         SELECT
@@ -287,7 +341,35 @@ def _fetch_overall_stats() -> Dict:
 
 def _fetch_what_changed(state: str, year1: int, year2: int) -> Dict:
     """Compare two years for a state."""
-    conn = _get_db()
+    if USE_SUPABASE:
+        from supabase_client import fetch_what_changed
+        rows = fetch_what_changed(state, year1, year2)
+        improvements = deteriorations = unchanged = 0
+        for r in rows:
+            delta = (r.get("stage_y2") or 0) - (r.get("stage_y1") or 0)
+            if delta < -2:
+                improvements += 1
+            elif delta > 2:
+                deteriorations += 1
+            else:
+                unchanged += 1
+        avg_y1 = sum(r.get("stage_y1") or 0 for r in rows) / max(len(rows), 1)
+        avg_y2 = sum(r.get("stage_y2") or 0 for r in rows) / max(len(rows), 1)
+        return {
+            "state": state, "year1": year1, "year2": year2,
+            "total_blocks": len(rows),
+            "avg_stage_y1": round(avg_y1, 2),
+            "avg_stage_y2": round(avg_y2, 2),
+            "stage_change": round(absolute_change(avg_y1, avg_y2), 2),
+            "pct_change": round(percentage_change(avg_y1, avg_y2), 2),
+            "improvements": improvements,
+            "deteriorations": deteriorations,
+            "unchanged": unchanged,
+            "overall_trend": "improving" if avg_y2 < avg_y1 else "deteriorating" if avg_y2 > avg_y1 else "stable",
+        }
+    import sqlite3
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
     c = conn.cursor()
     c.execute("""
         SELECT block, district,

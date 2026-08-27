@@ -13,6 +13,13 @@ load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"))
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///data/jaldrishti.db")
 DB_PATH = os.path.join(os.path.dirname(__file__), "..", "data", "jaldrishti.db")
 
+# ─── Supabase ────────────────────────────────────────────────────────────────
+
+SUPABASE_URL = os.getenv("SUPABASE_URL", "")
+SUPABASE_ANON_KEY = os.getenv("SUPABASE_ANON_KEY", "")
+SUPABASE_DB_PASSWORD = os.getenv("SUPABASE_DB_PASSWORD", "")
+USE_SUPABASE = os.getenv("USE_SUPABASE", "false").lower() == "true"
+
 # ─── Server ─────────────────────────────────────────────────────────────────
 
 HOST = os.getenv("HOST", "0.0.0.0")

@@ -15,7 +15,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from database import init_db, get_db, WaterReading, GroundWater, DataSource
-from config import DB_PATH
+from config import DB_PATH, USE_SUPABASE
 from parser import parse_message, ChatIntent, KNOWN_STATES
 from geo_resolver import resolve_location, resolve_state, get_all_states
 from query_router import classify_query, QueryType
@@ -34,7 +34,8 @@ LLM_MODEL = os.getenv("LLM_MODEL", "llama3.1:8b")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    init_db()
+    if not USE_SUPABASE:
+        init_db()
     seed_demo_data()
     yield
 
@@ -55,6 +56,26 @@ app.add_middleware(
 
 
 def seed_demo_data():
+    if USE_SUPABASE:
+        from supabase_client import sb_count, sb_insert
+        if sb_count("water_readings") == 0:
+            import random
+            stations = ["RIVER-01", "RIVER-02", "DAM-01", "LAKE-01"]
+            readings = []
+            for station in stations:
+                for _ in range(10):
+                    readings.append({
+                        "station_id": station,
+                        "water_level": round(random.uniform(2.0, 12.0), 2),
+                        "rainfall_mm": round(random.uniform(0.0, 50.0), 2),
+                        "ph_level": round(random.uniform(6.5, 8.5), 2),
+                        "turbidity": round(random.uniform(1.0, 100.0), 2),
+                        "timestamp": datetime.utcnow().isoformat(),
+                        "status": random.choice(["normal", "warning", "critical"]),
+                    })
+            sb_insert("water_readings", readings)
+        return
+
     from database import SessionLocal
     db = SessionLocal()
     if db.query(WaterReading).count() == 0:
