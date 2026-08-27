@@ -164,7 +164,7 @@ export default function Analytics() {
             const pct = Math.min(avg, 150) / 1.5;
             return (
               <div className="rank-row" key={r.name}>
-                <span className="rank-num" style={{ fontSize: 11 }}>{r.hindi}</span>
+                <span className="rank-num-hi">{r.hindi}</span>
                 <span className="rank-name">{r.name}</span>
                 <div className="rank-bar-track">
                   <div className="rank-bar-fill" style={{ width: `${pct}%`, background: r.color }} />

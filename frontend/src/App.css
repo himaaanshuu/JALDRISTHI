@@ -3642,6 +3642,16 @@
   font-weight: 700;
 }
 
+.rank-num-hi {
+  font-family: var(--font-hi);
+  font-size: 12px;
+  color: var(--text-secondary);
+  min-width: 60px;
+  font-weight: 600;
+  white-space: nowrap;
+  margin-right: var(--sp-2);
+}
+
 .rank-name {
   flex: 1;
   font-family: var(--font-ui);

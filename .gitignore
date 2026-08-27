@@ -24,3 +24,4 @@ backend/venv/
 frontend/vite.config.js
 frontend/vite.config.d.ts
 package-lock.json
+frontend/.env

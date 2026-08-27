@@ -65,7 +65,7 @@ export default function App() {
           <Route
             path="/*"
             element={
-              <ProtectedRoute requireAuth={false}>
+              <ProtectedRoute requireAuth={true}>
                 <MainApp />
               </ProtectedRoute>
             }
