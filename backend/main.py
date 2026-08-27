@@ -1,7 +1,7 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Depends, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
 from sqlalchemy import func, desc
@@ -9,12 +9,21 @@ from datetime import datetime
 from pydantic import BaseModel
 from typing import List, Optional
 import os
+import json
 from dotenv import load_dotenv
 
 load_dotenv()
 
 from database import init_db, get_db, WaterReading, GroundWater, DataSource
+from config import DB_PATH
 from parser import parse_message, ChatIntent, KNOWN_STATES
+from geo_resolver import resolve_location, resolve_state, get_all_states
+from query_router import classify_query, QueryType
+from numeric_calc import (
+    compute_state_comparison, compute_trend, compute_rankings,
+    compute_category_distribution, compute_risk_score, format_number
+)
+from smart_chat import smart_chat, smart_chat_streaming, get_session
 
 OLLAMA_BIN = os.getenv(
     "OLLAMA_BIN",
@@ -2228,6 +2237,252 @@ def parse_only(req: ChatRequest):
         "language": parsed.language,
         "raw_message": parsed.raw_message,
     }
+
+
+# ─── Smart Chat Endpoints (Hybrid RAG + SQL) ──────────────────────────────────
+
+class SmartChatRequest(BaseModel):
+    message: str
+    session_id: str = "default"
+    language: str = "english"
+
+
+class SmartChatResponse(BaseModel):
+    reply: str
+    sources: list
+    query_type: str
+    entities: dict
+    session_id: str
+    route: str
+
+
+@app.post("/api/smart/chat", response_model=SmartChatResponse)
+def smart_chat_endpoint(req: SmartChatRequest):
+    """Intelligent chat with SQL+RAG routing, geographic resolution, and conversation memory."""
+    result = smart_chat(req.message, req.session_id, req.language)
+    return SmartChatResponse(**result)
+
+
+@app.post("/api/smart/chat/stream")
+async def smart_chat_stream_endpoint(req: SmartChatRequest):
+    """Streaming intelligent chat endpoint."""
+    def generate():
+        for chunk in smart_chat_streaming(req.message, req.session_id, req.language):
+            yield f"data: {json.dumps(chunk)}\n\n"
+
+    return StreamingResponse(generate(), media_type="text/event-stream")
+
+
+# ─── Groundwater Data Endpoints ──────────────────────────────────────────────
+
+@app.get("/api/groundwater/state/{state}")
+def get_groundwater_state(state: str, year: int = Query(default=None)):
+    """Get comprehensive groundwater data for a state."""
+    from smart_chat import _fetch_state_latest, _fetch_state_data, _fetch_state_trend
+    from config import LATEST_ASSESSMENT_YEAR
+
+    resolved = resolve_state(state)
+    if not resolved:
+        return JSONResponse(status_code=404, content={"error": f"State '{state}' not found"})
+
+    if year:
+        data = _fetch_state_data(resolved, year)
+    else:
+        data = _fetch_state_latest(resolved)
+
+    if not data:
+        return JSONResponse(status_code=404, content={"error": f"No data for {resolved}"})
+
+    trend = _fetch_state_trend(resolved)
+
+    return {
+        "state": resolved,
+        "data": data,
+        "trend": {
+            "direction": trend.direction if trend else None,
+            "total_change": trend.total_change if trend else None,
+            "percentage_change": trend.percentage_change if trend else None,
+        } if trend else None,
+    }
+
+
+@app.get("/api/groundwater/district/{state}")
+def get_groundwater_districts(state: str, district: str = Query(default=None)):
+    """Get district-level groundwater data."""
+    from smart_chat import _fetch_district_data
+
+    resolved = resolve_state(state)
+    if not resolved:
+        return JSONResponse(status_code=404, content={"error": f"State '{state}' not found"})
+
+    data = _fetch_district_data(resolved, district)
+    return {"state": resolved, "districts": data}
+
+
+@app.get("/api/groundwater/block/{state}")
+def get_groundwater_blocks(state: str, district: str = Query(default=None), block: str = Query(default=None)):
+    """Get block-level groundwater data."""
+    from smart_chat import _fetch_block_data
+
+    resolved = resolve_state(state)
+    if not resolved:
+        return JSONResponse(status_code=404, content={"error": f"State '{state}' not found"})
+
+    data = _fetch_block_data(resolved, district, block)
+    return {"state": resolved, "blocks": data}
+
+
+@app.get("/api/groundwater/compare")
+def compare_groundwater(state_a: str = Query(...), state_b: str = Query(...), year: int = Query(default=None)):
+    """Compare groundwater between two states."""
+    from smart_chat import _fetch_state_comparison
+    from config import LATEST_ASSESSMENT_YEAR
+
+    resolved_a = resolve_state(state_a)
+    resolved_b = resolve_state(state_b)
+
+    if not resolved_a or not resolved_b:
+        return JSONResponse(status_code=400, content={"error": "Invalid state name(s)"})
+
+    result = _fetch_state_comparison(resolved_a, resolved_b, year or LATEST_ASSESSMENT_YEAR)
+    return result
+
+
+@app.get("/api/groundwater/rankings")
+def get_rankings(metric: str = Query(default="extraction_stage"), limit: int = Query(default=10)):
+    """Get state-level rankings."""
+    from smart_chat import _fetch_rankings
+    rankings = _fetch_rankings(metric, limit)
+    return {"metric": metric, "rankings": rankings}
+
+
+@app.get("/api/groundwater/trends/{state}")
+def get_state_trends(state: str):
+    """Get multi-year trend for a state."""
+    from smart_chat import _fetch_state_trend
+
+    resolved = resolve_state(state)
+    if not resolved:
+        return JSONResponse(status_code=404, content={"error": f"State '{state}' not found"})
+
+    trend = _fetch_state_trend(resolved)
+    if not trend:
+        return JSONResponse(status_code=404, content={"error": f"Insufficient trend data for {resolved}"})
+
+    return {
+        "state": resolved,
+        "metric": trend.metric,
+        "direction": trend.direction,
+        "total_change": trend.total_change,
+        "percentage_change": trend.percentage_change,
+        "avg_annual_change": trend.avg_annual_change,
+        "points": [{"year": p.year, "value": p.value} for p in trend.points],
+    }
+
+
+@app.get("/api/groundwater/category")
+def get_category(state: str = Query(default=None)):
+    """Get category distribution."""
+    from smart_chat import _fetch_category_distribution
+    dist = _fetch_category_distribution(state)
+    return dist
+
+
+@app.get("/api/groundwater/overview")
+def get_overview():
+    """Get national groundwater overview."""
+    from smart_chat import _fetch_overall_stats
+    return _fetch_overall_stats()
+
+
+@app.get("/api/groundwater/what-changed")
+def what_changed(state: str = Query(...), year1: int = Query(...), year2: int = Query(...)):
+    """Compare two years for a state."""
+    from smart_chat import _fetch_what_changed
+
+    resolved = resolve_state(state)
+    if not resolved:
+        return JSONResponse(status_code=404, content={"error": f"State '{state}' not found"})
+
+    return _fetch_what_changed(resolved, year1, year2)
+
+
+@app.get("/api/groundwater/over-exploited")
+def get_over_exploited(state: str = Query(default=None), limit: int = Query(default=20)):
+    """Get over-exploited blocks."""
+    conn = __import__("sqlite3").connect(DB_PATH)
+    conn.row_factory = __import__("sqlite3").Row
+    c = conn.cursor()
+    if state:
+        resolved = resolve_state(state)
+        c.execute("""
+            SELECT block, district, state, extraction_stage, groundwater_extraction, assessment_year
+            FROM groundwater WHERE category = 'Over-Exploited' AND state = ? AND block != ''
+            ORDER BY extraction_stage DESC LIMIT ?
+        """, (resolved, limit))
+    else:
+        c.execute("""
+            SELECT block, district, state, extraction_stage, groundwater_extraction, assessment_year
+            FROM groundwater WHERE category = 'Over-Exploited' AND block != ''
+            ORDER BY extraction_stage DESC LIMIT ?
+        """, (limit,))
+    rows = [dict(r) for r in c.fetchall()]
+    conn.close()
+    return {"over_exploited": rows, "count": len(rows)}
+
+
+@app.get("/api/states/all")
+def get_all_states_list():
+    """Get list of all Indian states and UTs."""
+    return {"states": get_all_states()}
+
+
+@app.get("/api/groundwater/quality")
+def get_quality_info(state: str = Query(default=None)):
+    """Get groundwater quality information."""
+    return {
+        "message": "Groundwater quality data is available through CGWB monitoring stations",
+        "parameters": ["Fluoride", "Arsenic", "Nitrate", "Iron", "TDS", "EC", "pH", "Chloride", "Sulphate", "Hardness", "Uranium"],
+        "state": state,
+        "source": "CGWB Annual Groundwater Quality Reports",
+    }
+
+
+# ─── Data Ingestion Admin Endpoints ──────────────────────────────────────────
+
+@app.post("/api/admin/ingest")
+def ingest_data(dataset_key: str = Query(...)):
+    """Trigger data ingestion for a dataset."""
+    from ingestion import ingest_dataset
+    result = ingest_dataset(dataset_key)
+    return {
+        "dataset_id": result.dataset_id,
+        "status": result.status,
+        "records_ingested": result.records_ingested,
+        "records_rejected": result.records_rejected,
+        "errors": result.errors[:10],
+    }
+
+
+@app.get("/api/admin/validation")
+def validation_report():
+    """Get data quality validation report."""
+    from ingestion import run_validation_report
+    return run_validation_report()
+
+
+@app.get("/api/admin/datasets")
+def list_datasets():
+    """List all ingested datasets."""
+    conn = __import__("sqlite3").connect(DB_PATH)
+    c = conn.cursor()
+    try:
+        c.execute("SELECT * FROM dataset_versions ORDER BY ingestion_date DESC")
+        rows = [dict(r) for r in c.fetchall()]
+    except Exception:
+        rows = []
+    conn.close()
+    return {"datasets": rows}
 
 
 # --- Serve built frontend ---

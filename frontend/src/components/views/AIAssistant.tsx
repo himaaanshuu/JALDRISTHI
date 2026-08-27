@@ -1,46 +1,38 @@
 import { useState, useRef, useEffect, type FormEvent } from "react";
 import {
-  sendLLMChatMessage,
+  sendSmartChatMessage,
+  streamSmartChat,
   checkLLMHealth,
-  type LLMChatApiResponse,
+  type SmartChatApiResponse,
   type LLMHealthResponse,
+  type SmartChatSource,
 } from "../../lib/api";
 
 interface Message {
   id: string;
   role: "user" | "ai";
   content: string;
-  llmData?: LLMChatApiResponse;
+  smartData?: SmartChatApiResponse;
   timestamp: Date;
+  streaming?: boolean;
 }
 
 const suggestedQueries = [
   "What is the groundwater status of Punjab?",
-  "Compare Haryana between 2020 and 2024.",
-  "Which districts have the highest extraction?",
-  "Show over-exploited areas in Rajasthan.",
-  "What is the trend for Gujarat?",
+  "Compare Rajasthan and Punjab.",
+  "Which states have the highest extraction?",
+  "Show over-exploited areas in Haryana.",
+  "What is the trend for Tamil Nadu?",
   "Which states are in critical condition?",
-  "Tell me about Delhi NCR groundwater.",
-  "Compare extraction in Tamil Nadu and Karnataka.",
-];
-
-const llmSuggestedQueries = [
-  "What causes groundwater depletion in India?",
-  "Explain the Atal Bhujal Yojana scheme.",
-  "How does crop diversification help groundwater?",
-  "What are the main aquifer types in India?",
-  "Tell me about fluoride contamination in groundwater.",
-  "How does climate change affect groundwater in India?",
-  "What is the role of CGWB in groundwater management?",
-  "How can rainwater harvesting help recharge aquifers?",
+  "Compare extraction in Karnataka and Maharashtra.",
+  "What management measures help groundwater?",
 ];
 
 const quickActions = [
-  { label: "Depletion", query: "Why is groundwater depleting in India?" },
-  { label: "Solutions", query: "What solutions exist for groundwater problems?" },
-  { label: "Contamination", query: "What are the main groundwater contamination issues?" },
-  { label: "Policy", query: "What government schemes address groundwater?" },
+  { label: "Overview", query: "Give me an overview of India's groundwater situation." },
+  { label: "Top Stressed", query: "Which states have the highest groundwater extraction stage?" },
+  { label: "Trends", query: "How has groundwater extraction changed over the years?" },
+  { label: "Solutions", query: "What management solutions exist for groundwater problems?" },
 ];
 
 function renderMarkdown(text: string): string {
@@ -64,6 +56,7 @@ export default function AIAssistant() {
   const [loading, setLoading] = useState(false);
   const [llmHealth, setLlmHealth] = useState<LLMHealthResponse | null>(null);
   const [language, setLanguage] = useState<"english" | "hindi">("english");
+  const [sessionId] = useState(() => `session-${Date.now()}`);
   const threadRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -100,34 +93,68 @@ export default function AIAssistant() {
     setInput("");
     setLoading(true);
 
+    // Create placeholder for streaming AI response
+    const aiMsgId = nextId();
+    const aiMsg: Message = {
+      id: aiMsgId,
+      role: "ai",
+      content: "",
+      timestamp: new Date(),
+      streaming: true,
+    };
+    setMessages((prev) => [...prev, aiMsg]);
+
     try {
-      if (isLLMAvailable) {
-        const llmData = await sendLLMChatMessage(text, 5, language);
-        const aiMsg: Message = {
-          id: nextId(),
-          role: "ai",
-          content: llmData.reply,
-          llmData,
-          timestamp: new Date(),
-        };
-        setMessages((prev) => [...prev, aiMsg]);
-      } else {
-        const errMsg: Message = {
-          id: nextId(),
-          role: "ai",
-          content: "Ollama is not running. Please start Ollama and refresh the page.",
-          timestamp: new Date(),
-        };
-        setMessages((prev) => [...prev, errMsg]);
+      let fullReply = "";
+      let sources: SmartChatSource[] = [];
+      let queryType = "";
+      let route = "";
+
+      for await (const chunk of streamSmartChat(text, sessionId, language)) {
+        if (chunk.type === "token") {
+          fullReply += chunk.content as string;
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === aiMsgId ? { ...m, content: fullReply } : m
+            )
+          );
+        } else if (chunk.type === "sources") {
+          sources = chunk.content as SmartChatSource[];
+        } else if (chunk.type === "content") {
+          fullReply = chunk.content as string;
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === aiMsgId ? { ...m, content: fullReply } : m
+            )
+          );
+        } else if (chunk.type === "done") {
+          break;
+        }
       }
-    } catch {
-      const errMsg: Message = {
-        id: nextId(),
-        role: "ai",
-        content: "Sorry, I encountered an error processing your request. Please try again.",
-        timestamp: new Date(),
+
+      // Finalize message
+      const smartData: SmartChatApiResponse = {
+        reply: fullReply,
+        sources,
+        query_type: queryType,
+        entities: {},
+        session_id: sessionId,
+        route,
       };
-      setMessages((prev) => [...prev, errMsg]);
+
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === aiMsgId ? { ...m, content: fullReply, smartData, streaming: false } : m
+        )
+      );
+    } catch {
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === aiMsgId
+            ? { ...m, content: "Sorry, I encountered an error processing your request. Please try again.", streaming: false }
+            : m
+        )
+      );
     } finally {
       setLoading(false);
       inputRef.current?.focus();
@@ -228,8 +255,8 @@ export default function AIAssistant() {
                 </div>
                 <h2 className="assist-welcome-title">जलदृष्टि DRISTI</h2>
                 <p className="assist-welcome-sub">
-                  Ask me anything about India's groundwater. I have access to CGWB/IN-GRES data
-                  and domain knowledge covering all 36 states, 285 districts, and 4 years of assessments.
+                  Professional groundwater intelligence for all 36 Indian states and union territories.
+                  Ask about extraction, recharge, trends, comparisons, quality, and management.
                 </p>
                 <div className="assist-welcome-chips">
                   {suggestedQueries.slice(0, 4).map((q) => (
@@ -262,27 +289,39 @@ export default function AIAssistant() {
                     msg.content
                   ) : (
                     <div className="ai-card-inner">
-                      <div
-                        className="ai-card-body"
-                        dangerouslySetInnerHTML={{ __html: renderMarkdown(msg.content) }}
-                      />
+                      <div className="ai-card-body">
+                        {msg.streaming && !msg.content ? (
+                          <div className="ai-typing">
+                            <span className="dot" />
+                            <span className="dot" />
+                            <span className="dot" />
+                            <span className="ai-typing-label">Analyzing groundwater data...</span>
+                          </div>
+                        ) : (
+                          <div dangerouslySetInnerHTML={{ __html: renderMarkdown(msg.content) }} />
+                        )}
+                      </div>
 
-                      {msg.llmData?.sources && msg.llmData.sources.length > 0 && (
+                      {msg.smartData?.sources && msg.smartData.sources.length > 0 && (
                         <div className="ai-evidence">
-                          <div className="ai-evidence-row">
-                            <span className="ai-evidence-label">Model</span>
-                            <span className="mono">{msg.llmData.model}</span>
-                          </div>
-                          <div className="ai-evidence-row">
-                            <span className="ai-evidence-label">Sources</span>
-                            <span>{msg.llmData.sources.length} docs retrieved</span>
-                          </div>
+                          {msg.smartData.sources.map((s: SmartChatSource, i: number) => (
+                            <div className="ai-evidence-row" key={i}>
+                              <span className="ai-evidence-label">{s.type === "database" ? "Data" : "Knowledge"}</span>
+                              <span>{s.title}</span>
+                            </div>
+                          ))}
+                          {msg.smartData.route && (
+                            <div className="ai-evidence-row">
+                              <span className="ai-evidence-label">Analysis</span>
+                              <span className="mono">{msg.smartData.query_type}</span>
+                            </div>
+                          )}
                         </div>
                       )}
 
-                      {msg.llmData && (
+                      {msg.smartData && !msg.streaming && (
                         <div className="ai-followups">
-                          {llmSuggestedQueries.slice(0, 3).map((f) => (
+                          {["Tell me more about this.", "Compare with other states.", "Show the trend."].map((f) => (
                             <button
                               className="chip"
                               key={f}
@@ -299,7 +338,7 @@ export default function AIAssistant() {
               </div>
             ))}
 
-            {loading && (
+            {loading && messages[messages.length - 1]?.role === "user" && (
               <div className="msg msg-ai">
                 <div className="ai-tag">
                   <span className="dot-live" />
@@ -310,7 +349,7 @@ export default function AIAssistant() {
                     <span className="dot" />
                     <span className="dot" />
                     <span className="dot" />
-                    <span className="ai-typing-label">Thinking...</span>
+                    <span className="ai-typing-label">Analyzing groundwater data...</span>
                   </div>
                 </div>
               </div>
@@ -322,7 +361,7 @@ export default function AIAssistant() {
               <input
                 ref={inputRef}
                 type="text"
-                placeholder="Ask Jaladhi about groundwater..."
+                placeholder="Ask about Indian groundwater..."
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 disabled={loading}
@@ -349,43 +388,33 @@ export default function AIAssistant() {
               </div>
             ))}
             <div className="col-title" style={{ marginTop: 18 }}>
-              Data Coverage
+              Capabilities
             </div>
             <div className="coverage-item">
               <span className="coverage-label">States/UTs</span>
               <span className="coverage-val mono">36</span>
             </div>
             <div className="coverage-item">
-              <span className="coverage-label">Districts</span>
-              <span className="coverage-val mono">285</span>
-            </div>
-            <div className="coverage-item">
-              <span className="coverage-label">Blocks</span>
-              <span className="coverage-val mono">192</span>
-            </div>
-            <div className="coverage-item">
-              <span className="coverage-label">Assessment Years</span>
-              <span className="coverage-val mono">2020, 22, 24, 25</span>
-            </div>
-            <div className="coverage-item">
-              <span className="coverage-label">Total Records</span>
-              <span className="coverage-val mono">914</span>
-            </div>
-            <div className="col-title" style={{ marginTop: 18 }}>
-              Jaladhi Info
-            </div>
-            <div className="coverage-item">
-              <span className="coverage-label">Model</span>
-              <span className="coverage-val mono">llama3.1:8b</span>
-            </div>
-            <div className="coverage-item">
-              <span className="coverage-label">Knowledge</span>
-              <span className="coverage-val mono">33+ docs</span>
-            </div>
-            <div className="coverage-item">
-              <span className="coverage-label">Source</span>
+              <span className="coverage-label">Data Source</span>
               <span className="coverage-val">CGWB / IN-GRES</span>
             </div>
+            <div className="coverage-item">
+              <span className="coverage-label">Analysis</span>
+              <span className="coverage-val">SQL + Knowledge</span>
+            </div>
+            <div className="coverage-item">
+              <span className="coverage-label">Languages</span>
+              <span className="coverage-val">English / हिंदी</span>
+            </div>
+            <div className="col-title" style={{ marginTop: 18 }}>
+              Query Types
+            </div>
+            <div className="topic-item">State status & overview</div>
+            <div className="topic-item">State comparisons</div>
+            <div className="topic-item">Trend analysis</div>
+            <div className="topic-item">Rankings & top areas</div>
+            <div className="topic-item">Quality information</div>
+            <div className="topic-item">Management advice</div>
           </div>
         </div>
       </div>
