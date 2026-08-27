@@ -115,18 +115,24 @@ export default function Sidebar({ active, onNavigate, open }: SidebarProps) {
       <div className="brand" style={{ cursor: "pointer" }} onClick={() => onNavigate("overview")}>
         <div className="brand-mark">
           <span className="brand-glyph">
-            <svg viewBox="0 0 26 26" fill="none">
-              <path
-                d="M13 2C13 2 4 12 4 17.2C4 22 8 24.5 13 24.5C18 24.5 22 22 22 17.2C22 12 13 2 13 2Z"
-                stroke="#5796A5"
-                strokeWidth={1.6}
-              />
-              <path
-                d="M8 17c1.5 2 3 2.8 5 2.8s3.5-.8 5-2.8"
-                stroke="#5796A5"
-                strokeWidth={1.2}
-                opacity={0.6}
-              />
+            <svg viewBox="0 0 48 48" fill="none">
+              <defs>
+                <linearGradient id="dropGrad" x1="24" y1="4" x2="24" y2="44">
+                  <stop offset="0%" stopColor="#3498db" />
+                  <stop offset="50%" stopColor="#1a5276" />
+                  <stop offset="100%" stopColor="#154360" />
+                </linearGradient>
+                <linearGradient id="leafGrad" x1="36" y1="12" x2="42" y2="24">
+                  <stop offset="0%" stopColor="#27ae60" />
+                  <stop offset="100%" stopColor="#2ecc71" />
+                </linearGradient>
+              </defs>
+              <path d="M24 4C24 4 8 18 8 26C8 34 15 42 24 42C33 42 40 34 40 26C40 18 24 4 24 4Z" fill="url(#dropGrad)" />
+              <path d="M12 32C16 28 18 26 24 26C30 26 32 28 36 32" stroke="#fff" strokeWidth="1.5" fill="none" opacity="0.4" />
+              <path d="M36 14C38 12 40 14 38 16C36 18 34 16 36 14Z" fill="url(#leafGrad)" />
+              <path d="M38 18C40 16 42 18 40 20C38 22 36 20 38 18Z" fill="#2ecc71" />
+              <circle cx="24" cy="20" r="4" fill="#fff" opacity="0.2" />
+              <circle cx="24" cy="20" r="2" fill="#fff" opacity="0.3" />
             </svg>
           </span>
           <div className="brand-name-block">
@@ -134,7 +140,8 @@ export default function Sidebar({ active, onNavigate, open }: SidebarProps) {
             <span className="brand-english">DRISTHI</span>
           </div>
         </div>
-        <div className="brand-sub">INGRES AI Chatbot</div>
+        <div className="brand-tagline">जल संरक्षण • जल संवर्धन • जल समृद्धि</div>
+        <div className="brand-sub">Groundwater Intelligence for a Sustainable India</div>
       </div>
 
       <nav className="nav">

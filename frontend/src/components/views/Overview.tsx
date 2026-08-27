@@ -130,11 +130,12 @@ export default function Overview() {
           <span className="brand-hindi">जल</span>
           <span className="hero-title-line2">DRISTHI</span>
         </h1>
+        <div className="hero-tagline">जल संरक्षण • जल संवर्धन • जल समृद्धि</div>
         <p className="hero-sub">
-          INGRES AI-powered groundwater intelligence platform for India
+          Groundwater Intelligence for a Sustainable India
         </p>
         <p className="hero-sub-hindi">
-          भारत के लिए INGRES AI संचालित भूजल बुद्धिमत्ता मंच। AI, स्थानिक विश्लेषण और ऐतिहासिक डेटा के माध्यम से भूजल का अन्वेषण करें।
+          टिकाऊ भारत के लिए भूजल बुद्धिमत्ता। AI, स्थानिक विश्लेषण और ऐतिहासिक डेटा के माध्यम से भूजल का अन्वेषण करें।
         </p>
         <div className="hero-meta">
           <div className="hero-meta-item">

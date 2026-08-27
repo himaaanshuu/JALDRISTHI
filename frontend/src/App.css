@@ -137,8 +137,8 @@
 }
 
 .brand-glyph {
-  width: 28px;
-  height: 28px;
+  width: 48px;
+  height: 48px;
   flex: none;
   position: relative;
 }
@@ -150,33 +150,48 @@
 
 .brand-name-block {
   display: flex;
-  flex-direction: column;
-  gap: 1px;
+  align-items: baseline;
+  gap: 6px;
 }
 
 .brand-hindi {
   font-family: var(--font-hi);
-  font-size: 18px;
-  font-weight: 600;
-  color: #fff;
+  font-size: 22px;
+  font-weight: 700;
+  color: #1a5276;
   line-height: 1.2;
   letter-spacing: 0.01em;
 }
 
 .brand-english {
   font-family: var(--font-ui);
-  font-size: var(--text-xs);
-  font-weight: 600;
-  color: #a0b8bd;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
+  font-size: 18px;
+  font-weight: 700;
+  background: linear-gradient(135deg, #1a5276, #27ae60);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: 0.08em;
+}
+
+.brand-tagline {
+  font-family: var(--font-hi);
+  font-size: 9px;
+  color: #1a5276;
+  letter-spacing: 0.05em;
+  margin-top: 4px;
+  opacity: 0.8;
 }
 
 .brand-sub {
   margin-top: var(--sp-2);
   font-family: var(--font-ui);
-  font-size: var(--text-xs);
-  letter-spacing: 0.14em;
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #5796A5;
+  opacity: 0.9;
+}
   color: #607a82;
   font-weight: 500;
   text-transform: uppercase;
@@ -602,14 +617,25 @@
 .hero-title .brand-hindi {
   font-family: var(--font-hi);
   font-size: clamp(56px, 9vw, 110px);
-  font-weight: 600;
-  color: var(--water-blue);
+  font-weight: 700;
+  color: #1a5276;
 }
 
 .hero-title-line2 {
   display: block;
-  color: var(--water-blue);
-  opacity: 0.25;
+  background: linear-gradient(135deg, #1a5276, #27ae60);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.hero-tagline {
+  font-family: var(--font-hi);
+  font-size: 14px;
+  color: #1a5276;
+  letter-spacing: 0.1em;
+  margin-bottom: var(--sp-4);
+  opacity: 0.8;
 }
 
 .hero-sub {
