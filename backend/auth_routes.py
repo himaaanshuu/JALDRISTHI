@@ -45,7 +45,7 @@ async def get_current_profile(user: Dict[str, Any] = Depends(require_auth)):
     result = supabase_request("GET", "/profiles", params={
         "auth_user_id": f"eq.{user_id}",
         "select": "*",
-    })
+    }, admin=True)
     if not result or len(result) == 0:
         raise HTTPException(status_code=404, detail="Profile not found")
     return result[0]
@@ -61,7 +61,7 @@ async def update_profile(
     existing = supabase_request("GET", "/profiles", params={
         "auth_user_id": f"eq.{user_id}",
         "select": "id",
-    })
+    }, admin=True)
     if not existing or len(existing) == 0:
         raise HTTPException(status_code=404, detail="Profile not found")
 
@@ -72,7 +72,7 @@ async def update_profile(
     if update.phone is not None:
         update_data["phone"] = update.phone
 
-    result = supabase_request("PATCH", f"/profiles?id=eq.{profile_id}", json_data=update_data)
+    result = supabase_request("PATCH", f"/profiles?id=eq.{profile_id}", json_data=update_data, admin=True)
     return {"status": "updated", "profile_id": profile_id}
 
 
@@ -82,7 +82,7 @@ async def list_users(user: Dict[str, Any] = Depends(require_admin)):
     result = supabase_request("GET", "/profiles", params={
         "select": "id,auth_user_id,full_name,email,phone,role,created_at",
         "order": "created_at.desc",
-    })
+    }, admin=True)
     return {"users": result or []}
 
 
@@ -98,7 +98,7 @@ async def update_user_role(
     result = supabase_request("PATCH", f"/profiles?id=eq.{profile_id}", json_data={
         "role": update.role,
         "updated_at": "now()",
-    })
+    }, admin=True)
     return {"status": "role_updated", "profile_id": profile_id, "role": update.role}
 
 

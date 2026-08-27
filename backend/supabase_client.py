@@ -12,12 +12,14 @@ logger = logging.getLogger("supabase_client")
 
 SUPABASE_URL = os.getenv("SUPABASE_URL", "")
 SUPABASE_KEY = os.getenv("SUPABASE_ANON_KEY", "")
+SUPABASE_SERVICE_ROLE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "")
 
 _client: Optional[Client] = None
+_admin_client: Optional[Client] = None
 
 
 def get_client() -> Client:
-    """Get or create Supabase client singleton."""
+    """Get or create Supabase client singleton (anon key, subject to RLS)."""
     global _client
     if _client is None:
         if not SUPABASE_URL or not SUPABASE_KEY:
@@ -25,6 +27,17 @@ def get_client() -> Client:
         _client = create_client(SUPABASE_URL, SUPABASE_KEY)
         logger.info("Supabase client initialized")
     return _client
+
+
+def get_admin_client() -> Client:
+    """Get or create Supabase admin client (service role key, bypasses RLS)."""
+    global _admin_client
+    if _admin_client is None:
+        if not SUPABASE_URL or not SUPABASE_SERVICE_ROLE_KEY:
+            raise ValueError("SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be set")
+        _admin_client = create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
+        logger.info("Supabase admin client initialized")
+    return _admin_client
 
 
 # ─── Generic CRUD ────────────────────────────────────────────────────────────
@@ -101,13 +114,16 @@ def sb_count(table: str, filters: Dict[str, Any] = None) -> int:
 
 
 def supabase_request(method: str, path: str, json_data: Any = None,
-                     params: Dict[str, str] = None) -> Any:
-    """Make a raw HTTP request to Supabase REST API (for auth routes)."""
+                     params: Dict[str, str] = None, admin: bool = False) -> Any:
+    """Make a raw HTTP request to Supabase REST API.
+    admin=True uses service_role key (bypasses RLS).
+    """
     import requests
     url = f"{SUPABASE_URL}/rest/v1{path}"
+    api_key = SUPABASE_SERVICE_ROLE_KEY if admin else SUPABASE_KEY
     headers = {
-        "apikey": SUPABASE_KEY,
-        "Authorization": f"Bearer {SUPABASE_KEY}",
+        "apikey": api_key,
+        "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json",
         "Prefer": "return=representation",
     }

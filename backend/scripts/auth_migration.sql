@@ -22,7 +22,7 @@ CREATE POLICY "Users can view own profile"
     ON profiles FOR SELECT
     USING (auth.uid() = auth_user_id);
 
--- 4. Users can update their own profile
+-- 4. Users can update their own profile (name only, role is admin-controlled)
 CREATE POLICY "Users can update own profile"
     ON profiles FOR UPDATE
     USING (auth.uid() = auth_user_id)
@@ -33,25 +33,15 @@ CREATE POLICY "Users can insert own profile"
     ON profiles FOR INSERT
     WITH CHECK (auth.uid() = auth_user_id);
 
--- 6. Admins can view all profiles
-CREATE POLICY "Admins can view all profiles"
-    ON profiles FOR SELECT
-    USING (
-        EXISTS (
-            SELECT 1 FROM profiles
-            WHERE auth_user_id = auth.uid() AND role = 'admin'
-        )
-    );
+-- 6. Service role can do everything (used by admin API endpoints)
+CREATE POLICY "Service role full access"
+    ON profiles FOR ALL
+    USING (auth.role() = 'service_role');
 
--- 7. Admins can update any profile
-CREATE POLICY "Admins can update any profile"
-    ON profiles FOR UPDATE
-    USING (
-        EXISTS (
-            SELECT 1 FROM profiles
-            WHERE auth_user_id = auth.uid() AND role = 'admin'
-        )
-    );
+-- 7. Authenticated users can read limited profile info (for user lists, etc.)
+CREATE POLICY "Authenticated users can view basic profile fields"
+    ON profiles FOR SELECT
+    USING (auth.role() = 'authenticated');
 
 -- 8. Auto-create profile on user signup via trigger
 CREATE OR REPLACE FUNCTION handle_new_user()
