@@ -1,26 +1,45 @@
-# जल DRISTHI
+# जलDRISTHI
 
-**Groundwater Intelligence Platform for India**
+**Groundwater Intelligence for a Sustainable India**
 
-जल DRISTHI is a comprehensive groundwater assessment and monitoring platform covering all 36 states and union territories of India. It integrates official CGWB/IN-GRES data with an AI-powered chat assistant "Jaladhi", interactive GeoJSON choropleth map, year-aware assessment timeline (2020–2026), trend analytics, risk scoring, and a bilingual learning center — deployed on Supabase PostgreSQL.
+**जल संरक्षण • जल संवर्धन • जल समृद्धि**
+
+जलDRISTHI is a comprehensive groundwater assessment and monitoring platform covering all 36 states and union territories of India. It integrates official CGWB/IN-GRES data with an AI-powered INGRES AI chatbot, interactive GeoJSON choropleth map, year-aware assessment timeline (2020–2026), CGWB classification criteria, trend analytics, risk scoring, and a bilingual learning center — deployed on Supabase PostgreSQL.
 
 ---
 
 ## Features
 
-- **Jaladhi AI Assistant** — Professional bilingual (English/Hindi) conversational assistant powered by Ollama LLM with hybrid RAG pipeline (TF-IDF retrieval + structured SQL data). Streaming responses, conversation memory, and 16 query types
-- **Interactive GeoJSON Map** — Leaflet-based choropleth map with state boundaries color-coded by groundwater category (Safe, Semi-Critical, Critical, Over-Exploited). Supports state and district drill-down with tooltips showing state name (EN+HI), category, extraction stage, recharge, and extraction values
+- **INGRES AI Chatbot** — Professional bilingual (English/Hindi) conversational assistant powered by Ollama LLM with hybrid RAG pipeline (TF-IDF retrieval + structured SQL data). Streaming responses, conversation memory, and 16 query types
+- **Interactive GeoJSON Map** — Leaflet-based choropleth map with state boundaries color-coded by CGWB groundwater category (Safe, Semi-Critical, Critical, Over-Exploited). Supports state and district drill-down with tooltips showing state name (EN+HI), category, extraction stage, recharge, and extraction values
+- **CGWB Classification Criteria** — Complete documentation of Central Ground Water Board classification system with extraction stage thresholds, conditions, and management actions for each category
 - **Year-Aware Assessment System (2020–2026)** — Dynamic assessment-year timeline with availability detection from Supabase. All map data, statistics, district details, and charts filter by selected year. Unavailable years shown dimmed with "Data unavailable" indicator
 - **Year Comparison** — Compare any two assessment years for a state. Shows block-level changes, stage/extraction/recharge deltas, category improvements/deteriorations, and overall trend
 - **Status History & Transitions** — Timeline of category transitions across available years with trend arrows (improved/deteriorated/unchanged)
 - **Historical Trend Charts** — Multi-year trend visualization with gaps for missing years (no fabricated data)
-- **Trend Analytics** — Area chart showing extraction, recharge, and stage trends across assessment years
+- **Trend Analytics** — Dynamic charts showing category distribution, state rankings, regional analysis, and AI-powered insights
 - **Risk Analysis** — AI-derived risk scores (0–100) for each state based on extraction stage, category distribution, historical trends, and risk concentration
+- **Intelligence Reports** — Configurable report generation with state selection, section toggles, and dynamic preview based on CGWB classification
 - **Data Provenance** — Full source tracking with official data import, validation reports, and evidence citations
-- **Groundwater Learning Center** — Bilingual educational content covering measurement units, extraction stage formulas, aquifer basics, and India usage breakdown
+- **Groundwater Learning Center** — Bilingual educational content covering CGWB classification criteria, measurement units, extraction stage formulas, aquifer basics, and India usage breakdown
 - **Bilingual Design** — Hindi + English typography with Noto Sans Devanagari, Inter, IBM Plex Mono, and Bebas Neue
 - **State & District Coverage** — 912+ records across all 36 states/UTs, multiple assessment years
 - **Supabase Backend** — PostgreSQL database hosted on Supabase with REST API, row-level security, and real-time capabilities
+
+---
+
+## CGWB Groundwater Classification
+
+The Central Ground Water Board (CGWB) classifies assessment units based on the Stage of Groundwater Extraction (SGE):
+
+| Category | SGE Range | Condition | Management Action |
+|----------|-----------|-----------|-------------------|
+| **Safe** | < 70% | Extraction within sustainable limits | Monitor and maintain |
+| **Semi-Critical** | 70–90% | Approaching sustainable limits | Regulate new wells, promote efficiency |
+| **Critical** | 90–100% | Nearly exceeded recharge | Ban new extraction, enforce pricing |
+| **Over-Exploited** | ≥ 100% | More extracted than replenished | Emergency measures, alternative sources |
+
+**Formula:** `SGE (%) = (Net Groundwater Extraction / Net Groundwater Availability) × 100`
 
 ---
 
@@ -77,18 +96,18 @@ jaldrishti/
 │   │   ├── App.css              # Design system (CSS variables, typography, map styles)
 │   │   ├── vite-env.d.ts        # TypeScript declarations (GeoJSON module)
 │   │   ├── components/
-│   │   │   ├── Sidebar.tsx      # Bilingual navigation
-│   │   │   ├── Topbar.tsx       # Search input, year selector, AI button
+│   │   │   ├── Sidebar.tsx      # Bilingual navigation with जलDRISTHI logo
+│   │   │   ├── Topbar.tsx       # Search input, year selector, INGRES AI button
 │   │   │   ├── IndiaLeafletMap.tsx  # Leaflet + GeoJSON choropleth map
 │   │   │   └── views/
 │   │   │       ├── Overview.tsx     # Dashboard with KPI cards + map
-│   │   │       ├── AIAssistant.tsx  # Jaladhi chat with streaming
+│   │   │       ├── AIAssistant.tsx  # INGRES AI chat with streaming
 │   │   │       ├── MapView.tsx      # Full intelligence map (modes, year timeline, panels)
-│   │   │       ├── Analytics.tsx    # Trends and rankings
-│   │   │       ├── Compare.tsx      # Year-over-year comparison
-│   │   │       ├── Reports.tsx      # Report generation
+│   │   │       ├── Analytics.tsx    # Dynamic analytics with rankings and insights
+│   │   │       ├── Compare.tsx      # Year-over-year comparison with state selection
+│   │   │       ├── Reports.tsx      # Configurable report generation
 │   │   │       ├── DataSources.tsx  # Data provenance
-│   │   │       └── Learning.tsx     # Groundwater knowledge center
+│   │   │       └── Learning.tsx     # CGWB classification + groundwater knowledge center
 │   │   ├── data/
 │   │   │   ├── stateMap.ts      # GeoJSON↔DB name mapping, status colors, color scales
 │   │   │   └── states.ts       # State data types and ViewKey definition
@@ -424,7 +443,7 @@ python3 -m uvicorn main:app --host 0.0.0.0 --port 8000
 | `/api/groundwater/trends/{state}` | GET | Multi-year trend for a state |
 | `/api/groundwater/over-exploited` | GET | Over-exploited blocks list |
 
-### AI Chat (Jaladhi)
+### AI Chat (INGRES AI)
 | Endpoint | Method | Description |
 |----------|--------|-------------|
 | `/api/smart/chat` | POST | Smart chat (SQL + RAG hybrid) |
@@ -435,9 +454,9 @@ python3 -m uvicorn main:app --host 0.0.0.0 --port 8000
 
 ---
 
-## Jaladhi AI Assistant
+## INGRES AI Assistant
 
-Jaladhi is the intelligent groundwater assistant built into the platform.
+INGRES AI is the intelligent groundwater assistant built into the जलDRISTHI platform.
 
 **Capabilities:**
 - Natural language queries in English, Hindi, and Hinglish
@@ -497,7 +516,7 @@ Jaladhi is the intelligent groundwater assistant built into the platform.
 
 Data sourced from **OpenCity.in** CKAN Datastore API with full provenance tracking.
 
-> **Note:** जल DRISTHI is a prototype. Official groundwater data should be verified against primary CGWB/IN-GRES sources for policy or operational decisions.
+> **Note:** जलDRISTHI is a prototype. Official groundwater data should be verified against primary CGWB/IN-GRES sources for policy or operational decisions.
 
 ---
 
@@ -517,59 +536,61 @@ Data sourced from **OpenCity.in** CKAN Datastore API with full provenance tracki
 | Phase 8: Editorial Design | ✅ | Full-viewport hero, metadata labels |
 | Phase 9: Deployment | ✅ | Static file serving, environment config |
 | Phase 10: LLM Integration | ✅ | Ollama + RAG pipeline, 36+ knowledge docs |
-| Phase 11: Jaladhi Rename | ✅ | Sidebar, topbar, chat header rebranded |
+| Phase 11: INGRES AI Rename | ✅ | Sidebar, topbar, chat header rebranded |
 | Phase 12: Source Count Fix | ✅ | Improved retrieval, Hindi keyword mapping |
 | Phase 13: Production Upgrade | ✅ | Geo resolver, query router, numeric calc, streaming |
 | Phase 14: Supabase Migration | ✅ | PostgreSQL on Supabase, REST API client, data migration |
 | Phase 15: GeoJSON Choropleth Map | ✅ | Leaflet + GeoJSON state/district boundaries, color-coded by category |
 | Phase 16: Year-Aware Assessment | ✅ | 2020–2026 timeline, availability detection, year-specific filtering |
 | Phase 17: Year Comparison | ✅ | YoY block-level comparison, category transitions, status history |
+| Phase 18: CGWB Classification | ✅ | Complete classification criteria with conditions and management actions |
+| Phase 19: Enhanced Views | ✅ | Dynamic Analytics, Compare with state selection, configurable Reports |
 
 ### Currently Working
 
 | Feature | Status | Description |
 |---------|--------|-------------|
-| Jaladhi AI Assistant | ✅ Done | LLM-only mode, streaming, bilingual |
+| INGRES AI Chatbot | ✅ Done | LLM-only mode, streaming, bilingual |
 | Supabase Database | ✅ Done | 912 records on PostgreSQL |
 | GeoJSON Choropleth Map | ✅ Done | State + district boundaries, 35 states, 594 districts |
 | Year-Aware Timeline | ✅ Done | 2020–2026 with availability detection |
 | Year Comparison | ✅ Done | Block-level YoY comparison |
 | Status Transitions | ✅ Done | Category transition history across years |
+| CGWB Classification | ✅ Done | Complete criteria documentation |
 | Trend Analytics | ✅ Done | Multi-year extraction/recharge/stage charts |
 | Risk Scoring | ✅ Done | AI-derived 0-100 risk scores per state |
-| Learning Center | ✅ Done | Bilingual educational content |
+| Intelligence Reports | ✅ Done | Configurable report generation |
+| Learning Center | ✅ Done | CGWB criteria + bilingual educational content |
 | 108 Automated Tests | ✅ Done | Geo, router, calc, DB, SQL injection, hallucination |
 
 ### Upcoming Features
 
-#### Phase 18: Water Quality & Levels
+#### Phase 20: Water Quality & Levels
 - [ ] Groundwater quality data integration (fluoride, arsenic, nitrate, iron, TDS)
 - [ ] Pre/post monsoon water level tracking
 - [ ] Quality heatmap overlays on map
 - [ ] Contamination risk alerts
 
-#### Phase 19: Advanced Analytics
+#### Phase 21: Advanced Analytics
 - [ ] Predictive modeling — forecast extraction trends 5 years ahead
 - [ ] Anomaly detection — flag unusual extraction spikes
 - [ ] District-level heatmaps with drill-down
 - [ ] Water budget calculator — input area, get recharge/extraction estimates
 - [ ] Satellite data integration (NASA GRACE groundwater storage)
 
-#### Phase 20: User Features
+#### Phase 22: User Features
 - [ ] User authentication (JWT-based via Supabase Auth)
 - [ ] Saved queries and bookmarks
 - [ ] Custom dashboards — pin favorite states/districts
 - [ ] Alert system — email/SMS when extraction crosses threshold
-- [ ] Compare tool — side-by-side state comparison
 
-#### Phase 21: Data Expansion
+#### Phase 23: Data Expansion
 - [ ] Real-time CGWB data sync (webhook/API polling)
 - [ ] Rainfall data integration (IMD records)
 - [ ] Crop water requirement data (CGWB crop coefficient tables)
 - [ ] Borewell registration data (state-level)
-- [ ] Extensible ingestion framework for new data sources
 
-#### Phase 22: Mobile & Deployment
+#### Phase 24: Mobile & Deployment
 - [ ] Progressive Web App (PWA) with offline support
 - [ ] React Native mobile app
 - [ ] Docker containerization
