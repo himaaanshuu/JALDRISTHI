@@ -13,9 +13,9 @@ import {
 const SUPPORTED_YEARS = [2020, 2021, 2022, 2023, 2024, 2025, 2026];
 
 const MAP_MODES: { key: MapMode; label: string; icon: string }[] = [
-  { key: 'status', label: 'Groundwater Status', icon: '💧' },
-  { key: 'extraction', label: 'Extraction Stage', icon: '📊' },
-  { key: 'recharge', label: 'Annual Recharge', icon: '🌧️' },
+  { key: 'status', label: 'Groundwater Status', icon: '' },
+  { key: 'extraction', label: 'Extraction Stage', icon: '' },
+  { key: 'recharge', label: 'Annual Recharge', icon: '' },
 ];
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
@@ -139,28 +139,29 @@ export default function MapView() {
       return;
     }
     Promise.all([
-      getAssessments({ state: selectedState, year, limit: 2000 }),
-      getStateTrends(selectedState),
-      getStatusTransitions(selectedState),
-    ]).then(([records, trend, trans]: [AssessmentRecord[], any, StatusTransitionsResponse]) => {
+      getAssessments({ state: selectedState, year, limit: 2000 }).catch(() => []),
+      getStateTrends(selectedState).catch(() => null),
+      getStatusTransitions(selectedState).catch(() => null),
+    ]).then(([records, trend, trans]: [AssessmentRecord[], any, StatusTransitionsResponse | null]) => {
       const blocks = records.filter((r: AssessmentRecord) => r.block);
-      const totalRecharge = blocks.reduce((s: number, r: AssessmentRecord) => s + (r.annual_groundwater_recharge || 0), 0);
-      const totalExtraction = blocks.reduce((s: number, r: AssessmentRecord) => s + (r.groundwater_extraction || 0), 0);
-      const avgStage = blocks.length ? blocks.reduce((s: number, r: AssessmentRecord) => s + (r.extraction_stage || 0), 0) / blocks.length : 0;
+      const dataRecords = blocks.length > 0 ? blocks : records;
+      const totalRecharge = dataRecords.reduce((s: number, r: AssessmentRecord) => s + (r.annual_groundwater_recharge || 0), 0);
+      const totalExtraction = dataRecords.reduce((s: number, r: AssessmentRecord) => s + (r.groundwater_extraction || 0), 0);
+      const avgStage = dataRecords.length ? dataRecords.reduce((s: number, r: AssessmentRecord) => s + (r.extraction_stage || 0), 0) / dataRecords.length : 0;
 
       setStateData({
         state: selectedState,
         data: {
           total_recharge: totalRecharge,
-          total_extractable: blocks.reduce((s: number, r: AssessmentRecord) => s + (r.extractable_groundwater_resource || 0), 0),
+          total_extractable: dataRecords.reduce((s: number, r: AssessmentRecord) => s + (r.extractable_groundwater_resource || 0), 0),
           total_extraction: totalExtraction,
           avg_stage: avgStage,
           districts: new Set(records.map((r: AssessmentRecord) => r.district).filter(Boolean)).size,
-          blocks: blocks.length,
-          oe_blocks: records.filter((r: AssessmentRecord) => r.category === 'Over-Exploited' && r.block).length,
-          critical_blocks: records.filter((r: AssessmentRecord) => r.category === 'Critical' && r.block).length,
-          sc_blocks: records.filter((r: AssessmentRecord) => r.category === 'Semi-Critical' && r.block).length,
-          safe_blocks: records.filter((r: AssessmentRecord) => r.category === 'Safe' && r.block).length,
+          blocks: blocks.length || records.length,
+          oe_blocks: records.filter((r: AssessmentRecord) => r.category === 'Over-Exploited').length,
+          critical_blocks: records.filter((r: AssessmentRecord) => r.category === 'Critical').length,
+          sc_blocks: records.filter((r: AssessmentRecord) => r.category === 'Semi-Critical').length,
+          safe_blocks: records.filter((r: AssessmentRecord) => r.category === 'Safe').length,
           assessment_year: year,
         },
         trend: trend ? {
@@ -193,7 +194,7 @@ export default function MapView() {
   const stateSummary = useMemo(() => {
     if (!selectedState) return null;
     const mapping = STATE_MAPPINGS.find(m => m.dbName === selectedState);
-    const records = allRecords.filter(r => r.state === selectedState && r.block);
+    const records = allRecords.filter(r => r.state === selectedState);
     const categories = {
       Safe: records.filter(r => r.category === 'Safe').length,
       'Semi-Critical': records.filter(r => r.category === 'Semi-Critical').length,
@@ -223,7 +224,7 @@ export default function MapView() {
     for (const m of STATE_MAPPINGS) {
       const records = byState.get(m.dbName);
       if (!records || records.length === 0) { noData++; continue; }
-      const latest = records.filter(r => r.block).sort((a, b) => (b.assessment_year || 0) - (a.assessment_year || 0))[0];
+      const latest = records.sort((a, b) => (b.assessment_year || 0) - (a.assessment_year || 0))[0];
       if (!latest) { noData++; continue; }
       switch (latest.category) {
         case 'Safe': safe++; break;
@@ -578,21 +579,21 @@ export default function MapView() {
                   {districtRecords.length > 0 ? (
                     <>
                       <div className="gw-map-panel-districts-header">
-                        Districts in {selectedStateMapping.displayName} ({year})
+                        Assessment Units in {selectedStateMapping.displayName} ({year})
                       </div>
                       {(() => {
                         const byDistrict = new Map<string, AssessmentRecord[]>();
                         for (const r of districtRecords) {
-                          if (!r.district) continue;
-                          if (!byDistrict.has(r.district)) byDistrict.set(r.district, []);
-                          byDistrict.get(r.district)!.push(r);
+                          const key = r.district || r.block || '__state_level__';
+                          if (!byDistrict.has(key)) byDistrict.set(key, []);
+                          byDistrict.get(key)!.push(r);
                         }
                         return Array.from(byDistrict.entries())
                           .map(([name, records]) => ({
-                            name,
-                            category: records.find(r => r.block)?.category || records[0]?.category || 'No Data',
-                            stage: records.filter(r => r.block).reduce((s, r) => s + (r.extraction_stage || 0), 0) / Math.max(records.filter(r => r.block).length, 1),
-                            blocks: records.filter(r => r.block).length,
+                            name: name === '__state_level__' ? `${selectedStateMapping.displayName} (State Level)` : name,
+                            category: records[0]?.category || 'No Data',
+                            stage: records.reduce((s, r) => s + (r.extraction_stage || 0), 0) / Math.max(records.length, 1),
+                            blocks: records.filter(r => r.block).length || records.length,
                           }))
                           .sort((a, b) => b.stage - a.stage)
                           .map(d => (
@@ -606,7 +607,7 @@ export default function MapView() {
                                 <span className="gw-map-panel-cat-dot" style={{ background: STATUS_COLORS[d.category] || STATUS_COLORS['No Data'] }} />
                                 <span>{d.category}</span>
                                 <span className="gw-map-panel-district-stage">{d.stage.toFixed(1)}%</span>
-                                <span className="gw-map-panel-district-blocks">{d.blocks} blocks</span>
+                                <span className="gw-map-panel-district-blocks">{d.blocks} units</span>
                               </div>
                             </button>
                           ));
@@ -614,19 +615,19 @@ export default function MapView() {
                     </>
                   ) : (
                     <div className="gw-map-panel-empty">
-                      No district-level data available for {year}
+                      No assessment data available for {selectedStateMapping.displayName} in {year}
                     </div>
                   )}
                 </div>
               )}
 
               {/* ─── Trends Tab ─── */}
-              {panelTab === 'trends' && trendData && (
+              {panelTab === 'trends' && (
                 <div className="gw-map-panel-trends">
                   <div className="gw-map-panel-trends-header">
                     Historical Trend: {selectedStateMapping.displayName}
                   </div>
-                  {trendData.points && trendData.points.length > 0 ? (
+                  {trendData && trendData.points && trendData.points.length > 1 ? (
                     <div className="gw-map-panel-trend-chart">
                       <svg viewBox="0 0 300 150" className="gw-trend-svg">
                         {(() => {
@@ -717,7 +718,12 @@ export default function MapView() {
                       </div>
                     </div>
                   ) : (
-                    <div className="gw-map-panel-empty">Insufficient data for trend analysis</div>
+                    <div className="gw-map-panel-empty">
+                      {trendData && trendData.points && trendData.points.length === 1
+                        ? `Only 1 year of data available (${trendData.points[0].year}). Need 2+ years for trend analysis.`
+                        : 'No multi-year trend data available for this state.'
+                      }
+                    </div>
                   )}
                 </div>
               )}
@@ -826,12 +832,12 @@ export default function MapView() {
               )}
 
               {/* ─── Transitions / History Tab ─── */}
-              {panelTab === 'transitions' && transitions && (
+              {panelTab === 'transitions' && (
                 <div className="gw-map-panel-transitions">
                   <div className="gw-map-panel-transitions-header">
                     Status History: {selectedStateMapping.displayName}
                   </div>
-                  {transitions.year_summaries.length > 0 ? (
+                  {transitions && transitions.year_summaries.length > 0 ? (
                     <>
                       {/* Year summaries */}
                       <div className="gw-map-transitions-timeline">
@@ -870,7 +876,12 @@ export default function MapView() {
                       )}
                     </>
                   ) : (
-                    <div className="gw-map-panel-empty">Insufficient historical data for transitions</div>
+                    <div className="gw-map-panel-empty">
+                      {transitions && transitions.years_available && transitions.years_available.length > 0
+                        ? `Only ${transitions.years_available.length} year(s) of data available. Need 2+ years for transition analysis.`
+                        : 'No historical assessment data available for this state.'
+                      }
+                    </div>
                   )}
                 </div>
               )}
