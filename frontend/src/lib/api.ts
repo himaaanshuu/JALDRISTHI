@@ -58,3 +58,41 @@ export function sendChatMessage(message: string): Promise<ChatApiResponse> {
     body: JSON.stringify({ message }),
   });
 }
+
+// ─── LLM Chat (Ollama RAG) ──────────────────────────────────────────────────
+
+export interface LLMSource {
+  title: string;
+  relevance: number;
+  content_preview: string;
+}
+
+export interface LLMChatApiResponse {
+  reply: string;
+  sources: LLMSource[];
+  model: string;
+  mode: string;
+}
+
+export function sendLLMChatMessage(
+  message: string,
+  top_k: number = 5,
+): Promise<LLMChatApiResponse> {
+  return fetchJson<LLMChatApiResponse>("/api/llm/chat", {
+    method: "POST",
+    body: JSON.stringify({ message, top_k }),
+  });
+}
+
+export interface LLMHealthResponse {
+  status: string;
+  ollama_installed: boolean;
+  model_available: boolean;
+  model?: string;
+  models_list?: string;
+  error?: string;
+}
+
+export function checkLLMHealth(): Promise<LLMHealthResponse> {
+  return fetchJson<LLMHealthResponse>("/api/llm/health");
+}

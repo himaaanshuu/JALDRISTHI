@@ -172,6 +172,10 @@ HOST=0.0.0.0
 PORT=8000
 DEBUG=true
 
+# LLM (Ollama)
+OLLAMA_BIN=/Applications/Ollama.app/Contents/Resources/ollama
+LLM_MODEL=llama3.1:8b
+
 # Frontend
 VITE_API_URL=http://localhost:8000
 ```
@@ -195,10 +199,41 @@ VITE_API_URL=http://localhost:8000
 | `/api/data/export` | GET | Export as CSV |
 | `/api/chat` | POST | AI chat with natural language queries |
 | `/api/chat/parse` | POST | Parse intent without querying DB |
+| `/api/llm/chat` | POST | LLM-powered chat (Ollama RAG) |
+| `/api/llm/health` | GET | Check Ollama availability |
+| `/api/llm/rebuild` | POST | Rebuild RAG knowledge base |
 
 ---
 
-## AI Chat
+## LLM Integration (Ollama)
+
+जलदृष्टि DRISTI includes a local LLM integration powered by Ollama for conversational groundwater intelligence.
+
+**Setup:**
+1. Install Ollama from https://ollama.ai
+2. Pull the model: `ollama pull llama3.1:8b`
+3. Start Ollama: `open /Applications/Ollama.app`
+4. The backend automatically connects to Ollama at `localhost:11434`
+
+**Architecture:**
+- **Retrieval**: TF-IDF vector search over 33+ knowledge documents (domain KB + database records)
+- **Generation**: Ollama llama3.1:8b for response generation
+- **Knowledge Base**: Covers aquifer types, extraction stages, CGWB categories, contamination issues, government policies, measurement units, and state-specific data
+- **Database Integration**: Real-time queries to SQLite for state/district/block data
+
+**Endpoints:**
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/llm/chat` | POST | Chat with LLM (params: `message`, `top_k`) |
+| `/api/llm/health` | GET | Check Ollama status and model availability |
+| `/api/llm/rebuild` | POST | Rebuild knowledge base after DB updates |
+
+**Frontend Mode Toggle:**
+The AI Assistant includes a toggle between Rule-Based (fast, deterministic) and LLM (conversational, context-aware) modes.
+
+---
+
+## AI Chat (Rule-Based)
 
 The AI assistant accepts natural language queries and returns structured responses with data, evidence, and follow-up suggestions.
 

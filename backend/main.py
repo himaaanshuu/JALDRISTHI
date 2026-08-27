@@ -16,6 +16,12 @@ load_dotenv()
 from database import init_db, get_db, WaterReading, GroundWater, DataSource
 from parser import parse_message, ChatIntent, KNOWN_STATES
 
+OLLAMA_BIN = os.getenv(
+    "OLLAMA_BIN",
+    "/Applications/Ollama.app/Contents/Resources/ollama",
+)
+LLM_MODEL = os.getenv("LLM_MODEL", "llama3.1:8b")
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -2122,6 +2128,86 @@ def chat(req: ChatRequest, db: Session = Depends(get_db)):
     resp.reply = translate_reply(resp.reply, language)
     resp.suggested_followups = translate_followups(resp.suggested_followups, language)
     return resp
+
+
+# ─── LLM Chat Endpoint ──────────────────────────────────────────────────────
+
+class LLMChatRequest(BaseModel):
+    message: str
+    top_k: int = 5
+
+
+class LLMSource(BaseModel):
+    title: str
+    relevance: float
+    content_preview: str
+
+
+class LLMChatResponse(BaseModel):
+    reply: str
+    sources: List[LLMSource]
+    model: str = "llama3.1:8b"
+    mode: str = "llm"
+
+
+@app.post("/api/llm/chat", response_model=LLMChatResponse)
+def llm_chat(req: LLMChatRequest):
+    """LLM-powered chat using RAG pipeline with Ollama."""
+    from rag import get_rag_engine, LLM_MODEL
+
+    engine = get_rag_engine()
+    result = engine.generate(req.message, top_k=req.top_k)
+
+    sources = [
+        LLMSource(
+            title=s["title"],
+            relevance=s["relevance"],
+            content_preview=s["content_preview"],
+        )
+        for s in result.get("sources", [])
+    ]
+
+    return LLMChatResponse(
+        reply=result["reply"],
+        sources=sources,
+        model=LLM_MODEL,
+    )
+
+
+@app.post("/api/llm/rebuild")
+def rebuild_llm_knowledge():
+    """Rebuild the RAG knowledge base (e.g. after DB update)."""
+    from rag import rebuild_rag_engine
+    rebuild_rag_engine()
+    return {"status": "ok", "message": "Knowledge base rebuilt"}
+
+
+@app.get("/api/llm/health")
+def llm_health():
+    """Check if Ollama is available and model is ready."""
+    import subprocess as _sp
+    try:
+        result = _sp.run(
+            [OLLAMA_BIN, "list"],
+            capture_output=True, text=True, timeout=10,
+        )
+        models = result.stdout.strip()
+        has_model = "llama3.1" in models
+        return {
+            "status": "ok" if has_model else "model_missing",
+            "ollama_installed": True,
+            "model_available": has_model,
+            "model": LLM_MODEL,
+            "models_list": models,
+        }
+    except FileNotFoundError:
+        return {
+            "status": "ollama_missing",
+            "ollama_installed": False,
+            "model_available": False,
+        }
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
 
 
 @app.post("/api/chat/parse")

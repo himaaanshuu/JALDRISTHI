@@ -2176,6 +2176,115 @@
   line-height: 1.5;
 }
 
+/* ─── Mode Toggle (LLM / Rule-based) ────────────────────────────────────── */
+
+.mode-toggle-bar {
+  display: flex;
+  gap: 2px;
+  padding: 4px;
+  background: var(--deep-water);
+  border-bottom: 1px solid var(--panel-line);
+}
+
+.mode-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border: none;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: rgba(255, 255, 255, 0.5);
+  font-family: var(--font-ui);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.mode-btn:hover {
+  color: rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.mode-btn.active {
+  background: rgba(31, 127, 189, 0.3);
+  color: #fff;
+  box-shadow: 0 1px 4px rgba(31, 127, 189, 0.3);
+}
+
+.mode-btn.disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.mode-btn.disabled:hover {
+  background: transparent;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.mode-badge-on,
+.mode-badge-off {
+  font-size: 9px;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 3px;
+  letter-spacing: 0.5px;
+}
+
+.mode-badge-on {
+  background: #22c55e;
+  color: #fff;
+}
+
+.mode-badge-off {
+  background: #ef4444;
+  color: #fff;
+}
+
+.ai-tag-llm {
+  font-size: 9px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 3px;
+  background: rgba(124, 58, 237, 0.2);
+  color: #c4b5fd;
+  letter-spacing: 0.5px;
+  margin-left: 6px;
+}
+
+.ai-typing-label {
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  margin-left: 6px;
+}
+
+.status-ok {
+  color: #22c55e;
+}
+
+.status-off {
+  color: #ef4444;
+}
+
+.inline-code {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+  padding: 1px 4px;
+  border-radius: 2px;
+  background: rgba(31, 127, 189, 0.08);
+  color: var(--water-blue);
+}
+
+/* ─── LLM Suggested Queries Chips ────────────────────────────────────────── */
+
+.ai-followups .chip {
+  font-family: var(--font-ui);
+  font-size: var(--text-xs);
+}
+
 .assist-input button:disabled {
   opacity: 0.4;
   cursor: not-allowed;
