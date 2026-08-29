@@ -4,6 +4,7 @@ import { AuthProvider } from "./components/auth/AuthContext";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import AuthCallback from "./components/auth/AuthCallback";
 import ProfilePage from "./components/auth/ProfilePage";
+import HeroSection from "./components/hero/HeroSection";
 import Sidebar from "./components/Sidebar";
 import Topbar from "./components/Topbar";
 import Overview from "./components/views/Overview";
@@ -55,6 +56,7 @@ export default function App() {
       <AuthProvider>
         <Routes>
           <Route path="/auth/callback" element={<AuthCallback />} />
+          <Route path="/hero" element={<HeroSection />} />
           <Route
             path="/profile"
             element={
