@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useRef, useState, useMemo } from "react";
 import IndiaLeafletMap, { GroundwaterRecord } from "../IndiaLeafletMap";
 import { fetchJson } from "../../lib/api";
 import { STATUS_COLORS } from "../../data/stateMap";
@@ -38,6 +38,9 @@ function formatNumber(n: number): string {
   return n.toFixed(1);
 }
 
+const HERO_VIDEO_URL =
+  "https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260328_083109_283f3553-e28f-428b-a723-d639c617eb2b.mp4";
+
 export default function Overview() {
   const [selectedState, setSelectedState] = useState<string | null>(null);
   const [statesSummary, setStatesSummary] = useState<StateSummary[]>([]);
@@ -63,6 +66,60 @@ export default function Overview() {
 
     return () => {
       active = false;
+    };
+  }, []);
+
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const animFrameRef = useRef<number>(0);
+  const [videoOpacity, setVideoOpacity] = useState(0);
+
+  useEffect(() => {
+    const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (prefersReduced) return;
+
+    const video = videoRef.current;
+    if (!video) return;
+
+    const FADE_DURATION = 0.5;
+
+    const tick = () => {
+      if (video.paused || video.ended) return;
+      const { currentTime, duration } = video;
+      if (!duration) {
+        animFrameRef.current = requestAnimationFrame(tick);
+        return;
+      }
+      const remaining = duration - currentTime;
+      if (currentTime < FADE_DURATION) {
+        setVideoOpacity(currentTime / FADE_DURATION);
+      } else if (remaining < FADE_DURATION) {
+        setVideoOpacity(remaining / FADE_DURATION);
+      } else {
+        setVideoOpacity(1);
+      }
+      animFrameRef.current = requestAnimationFrame(tick);
+    };
+
+    const onPlay = () => {
+      animFrameRef.current = requestAnimationFrame(tick);
+    };
+
+    const onEnded = () => {
+      setVideoOpacity(0);
+      setTimeout(() => {
+        video.currentTime = 0;
+        video.play();
+      }, 100);
+    };
+
+    video.addEventListener("play", onPlay);
+    video.addEventListener("ended", onEnded);
+    video.play().catch(() => {});
+
+    return () => {
+      cancelAnimationFrame(animFrameRef.current);
+      video.removeEventListener("play", onPlay);
+      video.removeEventListener("ended", onEnded);
     };
   }, []);
 
@@ -123,21 +180,31 @@ export default function Overview() {
   return (
     <section className="view active">
       <div className="ov-hero">
-        <div className="eyebrow">
+        <video
+          ref={videoRef}
+          className="ov-hero-video"
+          style={{ opacity: videoOpacity }}
+          src={HERO_VIDEO_URL}
+          muted
+          playsInline
+          loop={false}
+        />
+        <div className="ov-hero-video-overlay" />
+        <div className="eyebrow animate-fade-rise">
           CGWB · IN-GRES · National Assessment {coverage?.assessment_years.at(-1) ?? 2025}
         </div>
-        <h1 className="hero-title">
+        <h1 className="hero-title animate-fade-rise">
           <span className="brand-hindi">जल</span>
           <span className="hero-title-line2">DRISTHI</span>
         </h1>
-        <div className="hero-tagline">जल संरक्षण • जल संवर्धन • जल समृद्धि</div>
-        <p className="hero-sub">
+        <div className="hero-tagline animate-fade-rise-delay">जल संरक्षण • जल संवर्धन • जल समृद्धि</div>
+        <p className="hero-sub animate-fade-rise-delay">
           Groundwater Intelligence for a Sustainable India
         </p>
-        <p className="hero-sub-hindi">
+        <p className="hero-sub-hindi animate-fade-rise-delay">
           टिकाऊ भारत के लिए भूजल बुद्धिमत्ता। AI, स्थानिक विश्लेषण और ऐतिहासिक डेटा के माध्यम से भूजल का अन्वेषण करें।
         </p>
-        <div className="hero-meta">
+        <div className="hero-meta animate-fade-rise-delay-2">
           <div className="hero-meta-item">
             <span className="hero-meta-label">States / UTs</span>
             <span className="hero-meta-value">{coverage?.states_covered ?? 0}</span>

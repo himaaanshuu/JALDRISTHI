@@ -27,7 +27,7 @@
   --font-ui: "Inter", -apple-system, sans-serif;
   --font-hi: "Noto Sans Devanagari", sans-serif;
   --font-mono: "IBM Plex Mono", monospace;
-  --font-display: "Bebas Neue", "Arial Narrow", sans-serif;
+  --font-display: "Instrument Serif", "Georgia", serif;
 
   --shadow-panel: 0 1px 2px rgba(15, 23, 42, 0.06), 0 8px 24px -12px rgba(15, 23, 42, 0.12);
 
@@ -666,6 +666,35 @@
   overflow: hidden;
 }
 
+.ov-hero-video {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.ov-hero-video-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    180deg,
+    var(--bg) 0%,
+    rgba(245, 247, 245, 0.85) 30%,
+    rgba(245, 247, 245, 0.92) 70%,
+    var(--bg) 100%
+  );
+  pointer-events: none;
+}
+
 .eyebrow {
   display: inline-flex;
   align-items: center;
@@ -677,6 +706,8 @@
   color: var(--water-blue);
   font-weight: 600;
   margin-bottom: var(--sp-4);
+  position: relative;
+  z-index: 1;
 }
 
 .eyebrow::before {
@@ -690,13 +721,15 @@
   font-family: var(--font-display);
   font-size: clamp(56px, 9vw, 110px);
   font-weight: 400;
-  letter-spacing: 0.01em;
+  letter-spacing: -0.02em;
   color: var(--deep-water);
-  line-height: 1;
+  line-height: 0.95;
   margin-bottom: var(--sp-5);
   display: flex;
   align-items: baseline;
   gap: 0;
+  position: relative;
+  z-index: 1;
 }
 
 .hero-title .brand-hindi {
@@ -720,6 +753,8 @@
   letter-spacing: 0.1em;
   margin-bottom: var(--sp-4);
   opacity: 0.8;
+  position: relative;
+  z-index: 1;
 }
 
 .hero-sub {
@@ -731,6 +766,8 @@
   line-height: 1.7;
   font-weight: 400;
   letter-spacing: 0.01em;
+  position: relative;
+  z-index: 1;
 }
 
 .hero-meta {
@@ -739,6 +776,8 @@
   margin-top: var(--sp-5);
   padding-top: var(--sp-4);
   border-top: 1px solid var(--panel-line);
+  position: relative;
+  z-index: 1;
 }
 
 .hero-meta-item {
@@ -769,6 +808,8 @@
   color: var(--text-secondary);
   opacity: 0.6;
   margin-top: var(--sp-2);
+  position: relative;
+  z-index: 1;
 }
 
 /* AI Search */
@@ -897,7 +938,7 @@
 .kpi {
   background: var(--panel);
   padding: 20px 22px 18px;
-  animation: fadeUp 0.4s ease backwards;
+  animation: fade-rise 0.8s ease-out backwards;
   min-height: 156px;
   display: flex;
   flex-direction: column;
@@ -905,6 +946,11 @@
   border-right: 1px solid var(--panel-line);
   position: relative;
 }
+
+.kpi:nth-child(1) { animation-delay: 0.1s; }
+.kpi:nth-child(2) { animation-delay: 0.2s; }
+.kpi:nth-child(3) { animation-delay: 0.3s; }
+.kpi:nth-child(4) { animation-delay: 0.4s; }
 
 .kpi::before {
   content: "";
