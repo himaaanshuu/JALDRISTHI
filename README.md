@@ -4,7 +4,7 @@
 
 **जल संरक्षण • जल संवर्धन • जल समृद्धि**
 
-जलDRISTHI is a comprehensive groundwater assessment and monitoring platform covering all 36 states and union territories of India. It integrates official CGWB/IN-GRES data with an AI-powered INGRES AI chatbot, interactive GeoJSON choropleth map, year-aware assessment timeline (2020–2026), CGWB classification criteria, trend analytics, risk scoring, and a bilingual learning center — deployed on Supabase PostgreSQL.
+जलDRISTHI is a comprehensive groundwater assessment and monitoring platform covering all 36 states and union territories of India. It integrates official CGWB/IN-GRES data with an AI-powered INGRES AI chatbot, interactive GeoJSON choropleth map, year-aware assessment timeline (2020–2026), CGWB classification criteria, trend analytics, risk scoring, water quality intelligence, and a bilingual learning center — deployed on Supabase PostgreSQL with Google OAuth and Mobile OTP authentication.
 
 ---
 
@@ -12,6 +12,8 @@
 
 - **INGRES AI Chatbot** — Professional bilingual (English/Hindi) conversational assistant powered by Ollama LLM with hybrid RAG pipeline (TF-IDF retrieval + structured SQL data). Streaming responses, conversation memory, and 16 query types
 - **Interactive GeoJSON Map** — Leaflet-based choropleth map with state boundaries color-coded by CGWB groundwater category (Safe, Semi-Critical, Critical, Over-Exploited). Supports state and district drill-down with tooltips showing state name (EN+HI), category, extraction stage, recharge, and extraction values
+- **Authentication System** — Google OAuth and Mobile OTP login via Supabase Auth. JWT-based session management with role-based access control. Profile completion flow with glassmorphic login UI and cinematic water video background
+- **Water Quality Intelligence** — BIS/CGWB drinking water quality standards (IS 10500:2012) with state and district-level assessment. Parameter-wise exceedance analysis with safe/moderate/exceeded breakdowns
 - **CGWB Classification Criteria** — Complete documentation of Central Ground Water Board classification system with extraction stage thresholds, conditions, and management actions for each category
 - **Year-Aware Assessment System (2020–2026)** — Dynamic assessment-year timeline with availability detection from Supabase. All map data, statistics, district details, and charts filter by selected year. Unavailable years shown dimmed with "Data unavailable" indicator
 - **Year Comparison** — Compare any two assessment years for a state. Shows block-level changes, stage/extraction/recharge deltas, category improvements/deteriorations, and overall trend
@@ -22,7 +24,7 @@
 - **Intelligence Reports** — Configurable report generation with state selection, section toggles, and dynamic preview based on CGWB classification
 - **Data Provenance** — Full source tracking with official data import, validation reports, and evidence citations
 - **Groundwater Learning Center** — Bilingual educational content covering CGWB classification criteria, measurement units, extraction stage formulas, aquifer basics, and India usage breakdown
-- **Bilingual Design** — Hindi + English typography with Noto Sans Devanagari, Inter, IBM Plex Mono, and Bebas Neue
+- **Bilingual Design** — Hindi + English typography with Noto Sans Devanagari, Inter, IBM Plex Mono, and Instrument Serif
 - **State & District Coverage** — 520+ records across all 36 states/UTs, multiple assessment years (2020–2025)
 - **Supabase Backend** — PostgreSQL database hosted on Supabase with REST API, row-level security, and real-time capabilities
 
@@ -52,10 +54,11 @@ The Central Ground Water Board (CGWB) classifies assessment units based on the S
 | GeoJSON Data | India state boundaries (35 features), district boundaries (594 features) |
 | Backend | FastAPI, SQLAlchemy, Pydantic |
 | Database | **Supabase PostgreSQL** (hosted) |
+| Authentication | Supabase Auth — Google OAuth + Mobile OTP (SMS) |
 | Data Source | CGWB National Compilation on Dynamic Ground Water Resources of India (2020, 2022, 2024, 2025) |
 | AI/LLM | Ollama (llama3.1:8b), TF-IDF retrieval, hybrid RAG |
 | Query Engine | Geo resolver, query router, numeric calculator |
-| Display Font | Bebas Neue (editorial headlines) |
+| Display Font | Instrument Serif (branding & hero headings) |
 | Hindi Font | Noto Sans Devanagari (300–700) |
 | English Font | Inter (300–800) |
 | Data Font | IBM Plex Mono (400–600) |
@@ -79,11 +82,15 @@ jaldrishti/
 │   ├── numeric_calc.py          # Backend calculations (comparisons, trends, rankings)
 │   ├── ingestion.py             # Data ingestion framework (CGWB adapters)
 │   ├── supabase_client.py       # Supabase REST API client
+│   ├── auth_middleware.py       # JWT verification, require_auth, require_admin
+│   ├── auth_routes.py           # /api/auth/* endpoints (me, users, roles, verify)
+│   ├── water_quality_routes.py  # /api/water-quality/* endpoints, BIS standards
 │   ├── requirements.txt         # Python dependencies
 │   ├── test_comprehensive.py    # 108 automated tests (7 groups)
 │   └── scripts/
 │       ├── migrate_supabase.sql     # Supabase schema migration
 │       ├── migrate_to_supabase.py   # SQLite → Supabase data migration
+│       ├── auth_migration.sql       # Profiles table + RLS + auto-create trigger
 │       ├── import_ingres_data.py    # Data ingestion from CGWB publications
 │       └── validate_ingres_data.py  # Data quality validation
 ├── frontend/
@@ -92,28 +99,41 @@ jaldrishti/
 │   │       ├── india_states.geojson      # India state boundaries (1.5MB, 35 features)
 │   │       └── india_districts.geojson   # India district boundaries (2.8MB, 594 features)
 │   ├── src/
-│   │   ├── App.tsx              # App shell with view routing
+│   │   ├── App.tsx              # App shell with view routing + auth
 │   │   ├── App.css              # Design system (CSS variables, typography, map styles)
-│   │   ├── vite-env.d.ts        # TypeScript declarations (GeoJSON module)
+│   │   ├── Auth.css             # Glassmorphic auth pages with video background
+│   │   ├── index.css            # Global reset, font imports
+│   │   ├── styles/
+│   │   │   ├── fonts.css        # Instrument Serif + Inter font imports
+│   │   │   └── theme.css        # Fade-rise animation keyframes
 │   │   ├── components/
 │   │   │   ├── Sidebar.tsx      # Bilingual navigation with जलDRISTHI logo
 │   │   │   ├── Topbar.tsx       # Search input, year selector, INGRES AI button
 │   │   │   ├── IndiaLeafletMap.tsx  # Leaflet + GeoJSON choropleth map
+│   │   │   └── auth/
+│   │   │       ├── AuthContext.tsx       # Session management, profile state
+│   │   │       ├── AuthCallback.tsx      # OAuth redirect handler
+│   │   │       ├── LoginPage.tsx         # Google + OTP login with video bg
+│   │   │       ├── ProfileCompletePage.tsx  # Post-login profile collection
+│   │   │       ├── ProfilePage.tsx       # Edit profile with video bg
+│   │   │       └── ProtectedRoute.tsx    # Auth gating with profile check
 │   │   │   └── views/
-│   │   │       ├── Overview.tsx     # Dashboard with KPI cards + map
+│   │   │       ├── Overview.tsx     # Dashboard with KPI cards + map + video bg
 │   │   │       ├── AIAssistant.tsx  # INGRES AI chat with streaming
 │   │   │       ├── MapView.tsx      # Full intelligence map (modes, year timeline, panels)
 │   │   │       ├── Analytics.tsx    # Dynamic analytics with rankings and insights
 │   │   │       ├── Compare.tsx      # Year-over-year comparison with state selection
 │   │   │       ├── Reports.tsx      # Configurable report generation
 │   │   │       ├── DataSources.tsx  # Data provenance
-│   │   │       └── Learning.tsx     # CGWB classification + groundwater knowledge center
+│   │   │       ├── Learning.tsx     # CGWB classification + groundwater knowledge center
+│   │   │       └── WaterQuality.tsx # BIS water quality standards & assessment
 │   │   ├── data/
 │   │   │   ├── stateMap.ts      # GeoJSON↔DB name mapping, status colors, color scales
 │   │   │   └── states.ts       # Simplified state overview data for the SVG map
 │   │   └── lib/
-│   │       └── api.ts           # API client (chat, streaming, groundwater, year-aware endpoints)
-│   └── index.html               # Google Fonts
+│   │       ├── api.ts           # API client (chat, streaming, groundwater, year-aware endpoints)
+│   │       └── supabase.ts      # Supabase client with auth persistence config
+│   └── index.html               # Google Fonts, dark first-paint background
 ├── data/                        # SQLite database (fallback, gitignored)
 ├── .env                         # Environment variables (gitignored)
 ├── .env.example                 # Template for environment setup
@@ -203,7 +223,24 @@ This creates 7 tables: `groundwater`, `data_sources`, `water_readings`, `groundw
 
 > **Verify:** Go to **Table Editor** (left sidebar) and you should see all 7 tables listed.
 
-#### Step 3.5 — Configure Environment Variables
+#### Step 3.5 — Configure Authentication
+
+Run the auth migration in Supabase SQL Editor:
+
+1. Open `backend/scripts/auth_migration.sql` and paste into SQL Editor
+2. Click **"Run"**
+
+This creates the `profiles` table with RLS policies and auto-create trigger.
+
+Then configure auth providers in Supabase Dashboard → **Authentication** → **Providers**:
+
+1. **Google OAuth**: Enable, add your Google Client ID and Secret
+   - Callback URL: `https://<your-project>.supabase.co/auth/v1/callback`
+2. **Phone (SMS)**: Enable, configure your SMS provider (Twilio, etc.)
+
+Set the JWT secret in Supabase Dashboard → **Settings** → **API** → **JWT Secret**.
+
+#### Step 3.6 — Configure Environment Variables
 
 1. From the project root, copy the example env file:
 
@@ -232,12 +269,22 @@ VITE_API_URL=http://localhost:8000
 SUPABASE_URL=https://abc123xyz.supabase.co          # Your Project URL
 SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIs...           # Your Anon Key
 SUPABASE_DB_PASSWORD=your-strong-password-here       # Your DB Password
+SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIs...   # Your Service Role Key
+SUPABASE_JWT_SECRET=your-jwt-secret-here             # Your JWT Secret
 USE_SUPABASE=true
 ```
 
-> **Important:** Never commit `.env` to git. It's already in `.gitignore`.
+3. Also create `frontend/.env`:
 
-#### Step 3.6 — Migrate Data to Supabase
+```env
+VITE_API_URL=http://localhost:8000
+VITE_SUPABASE_URL=https://abc123xyz.supabase.co
+VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIs...
+```
+
+> **Important:** Never commit `.env` files to git. They're already in `.gitignore`.
+
+#### Step 3.7 — Migrate Data to Supabase
 
 Run the migration script to transfer groundwater records from the local SQLite database to Supabase:
 
@@ -270,32 +317,7 @@ Supabase connection: OK
 Migration complete! Total rows: 566
 ```
 
-Then run the state-level migration:
-
-```bash
-PYTHONPATH=. python3 -c "
-import sys; sys.path.insert(0, '.')
-from dotenv import load_dotenv; load_dotenv('../.env')
-import sqlite3
-from supabase_client import sb_insert, sb_count
-
-conn = sqlite3.connect('../data/jaldrishti.db')
-conn.row_factory = sqlite3.Row
-c = conn.cursor()
-c.execute('SELECT * FROM groundwater WHERE block = \"\" OR block IS NULL')
-rows = [dict(r) for r in c.fetchall()]
-conn.close()
-
-clean_rows = [{k: v for k, v in r.items() if k != 'id'} for r in rows]
-for i in range(0, len(clean_rows), 50):
-    sb_insert('groundwater', clean_rows[i:i+50])
-    print(f'  [{min(i+50, len(clean_rows))}/{len(clean_rows)}]')
-
-print(f'Total: {sb_count(\"groundwater\")} rows')
-"
-```
-
-#### Step 3.7 — Verify the Migration
+#### Step 3.8 — Verify the Migration
 
 ```bash
 PYTHONPATH=. python3 -c "
@@ -309,7 +331,7 @@ print(f'Water Readings: {sb_count(\"water_readings\")} rows')
 "
 ```
 
-Expected: `Groundwater: 912 rows`
+Expected: `Groundwater: 520 rows`
 
 #### Supabase Troubleshooting
 
@@ -321,6 +343,7 @@ Expected: `Groundwater: 912 rows`
 | `Could not find the table in the schema cache` | Wait 30 seconds after running SQL, then try again (schema cache refresh) |
 | Migration script hangs | Check your internet connection, Supabase may be temporarily slow |
 | `ModuleNotFoundError: No module named 'supabase'` | Run `pip install supabase` in your virtual environment |
+| Infinite recursion in RLS | Replace self-referencing admin policies with `auth.role() = 'service_role'` |
 
 ### 4. Set up Ollama (for AI chat)
 
@@ -369,6 +392,7 @@ npm run dev
 
 - Frontend: http://localhost:5173
 - Backend API: http://localhost:8000
+- Login page: http://localhost:5173 (redirects if not authenticated)
 
 ### Production mode (single server)
 
@@ -396,6 +420,8 @@ python3 -m uvicorn main:app --host 0.0.0.0 --port 8000
 | `SUPABASE_URL` | Supabase project URL | — |
 | `SUPABASE_ANON_KEY` | Supabase anon/publishable key | — |
 | `SUPABASE_DB_PASSWORD` | Supabase database password | — |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key (admin ops) | — |
+| `SUPABASE_JWT_SECRET` | JWT secret for token verification | — |
 | `USE_SUPABASE` | Enable Supabase (true/false) | `false` |
 
 ---
@@ -408,6 +434,14 @@ python3 -m uvicorn main:app --host 0.0.0.0 --port 8000
 | `/api/health` | GET | Health check |
 | `/api/dashboard/stats` | GET | Dashboard statistics |
 | `/api/data/coverage` | GET | Data coverage stats |
+
+### Authentication
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/auth/me` | GET | Get current user profile |
+| `/api/auth/users` | GET | List all users (admin) |
+| `/api/auth/users/{id}/role` | PUT | Update user role (admin) |
+| `/api/auth/verify` | POST | Verify JWT token |
 
 ### Groundwater Data
 | Endpoint | Method | Description |
@@ -430,6 +464,15 @@ python3 -m uvicorn main:app --host 0.0.0.0 --port 8000
 | `/api/groundwater/overview-year?year=` | GET | Year-specific national overview |
 | `/api/groundwater/year-compare?state=&year1=&year2=` | GET | YoY comparison with block-level changes |
 | `/api/groundwater/status-transitions?state=` | GET | Category transitions across years |
+
+### Water Quality
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/water-quality/standards` | GET | BIS/CGWB drinking water standards (IS 10500:2012) |
+| `/api/water-quality/state/{state}` | GET | State-level water quality assessment |
+| `/api/water-quality/district/{state}/{district}` | GET | District-level water quality |
+| `/api/water-quality/overall` | GET | Overall water quality summary |
+| `/api/water-quality/ingest` | POST | Ingest water quality data |
 
 ### Analytics
 | Endpoint | Method | Description |
@@ -486,8 +529,7 @@ INGRES AI is the intelligent groundwater assistant built into the जलDRISTHI 
 | `groundwater` | 520 | Core assessment data (state, district, block, extraction, stage, category) — sourced from CGWB |
 | `data_sources` | 4 | CGWB National Compilation publications (2020, 2022, 2024, 2025) |
 | `water_readings` | 40 | Sensor/monitoring data |
-| `groundwater_quality` | 0 | Quality parameters (fluoride, arsenic, nitrate, etc.) |
-| `groundwater_levels` | 0 | Pre/post monsoon water levels |
+| `profiles` | — | User profiles (auto-created on signup via trigger) |
 | `conversation_history` | — | Chat session memory |
 | `dataset_versions` | — | Data ingestion tracking |
 
@@ -508,7 +550,6 @@ INGRES AI is the intelligent groundwater assistant built into the जलDRISTHI 
 | GWRA-2025 (CGWB) | 2025 | 227 | 36 states, 227 districts |
 | State-level import | 2020 | 37 | All states |
 | State-level import | 2022 | 37 | All states |
-| District-level additions | 2020–2025 | 392 | 24 states, 285 districts |
 
 **Total: 520 records** across 36 states, sourced directly from CGWB publications.
 
@@ -529,7 +570,7 @@ Data sourced from **Central Ground Water Board (CGWB)**, Ministry of Jal Shakti 
 | Phase 3: Dashboard & Map | ✅ | Leaflet map, KPI cards, state detail panels |
 | Phase 4: AI Chat Assistant | ✅ | Intent parser, 9+ intents, Hindi/English/Hinglish |
 | Phase 5: Analytics | ✅ | Multi-year trends, risk scoring, comparisons |
-| Phase 6: Typography | ✅ | Bilingual design system, Bebas Neue, Noto Sans Devanagari |
+| Phase 6: Typography | ✅ | Bilingual design system, Instrument Serif, Noto Sans Devanagari |
 | Phase 7: Learning Center | ✅ | Bilingual educational content, measurement units |
 | Phase 8: Editorial Design | ✅ | Full-viewport hero, metadata labels |
 | Phase 9: Deployment | ✅ | Static file serving, environment config |
@@ -543,12 +584,15 @@ Data sourced from **Central Ground Water Board (CGWB)**, Ministry of Jal Shakti 
 | Phase 17: Year Comparison | ✅ | YoY block-level comparison, category transitions, status history |
 | Phase 18: CGWB Classification | ✅ | Complete classification criteria with conditions and management actions |
 | Phase 19: Enhanced Views | ✅ | Dynamic Analytics, Compare with state selection, configurable Reports |
+| Phase 20: Authentication | ✅ | Google OAuth + Mobile OTP via Supabase Auth, JWT verification, role-based access |
+| Phase 21: Water Quality | ✅ | BIS/CGWB drinking water standards, state & district assessment, exceedance analysis |
 
 ### Currently Working
 
 | Feature | Status | Description |
 |---------|--------|-------------|
 | INGRES AI Chatbot | ✅ Done | LLM-only mode, streaming, bilingual |
+| Authentication | ✅ Done | Google OAuth + Mobile OTP, glassmorphic UI with video bg |
 | Supabase Database | ✅ Done | 520 CGWB records on PostgreSQL |
 | GeoJSON Choropleth Map | ✅ Done | State + district boundaries, 35 states, 594 districts |
 | Year-Aware Timeline | ✅ Done | 2020–2026 with availability detection |
@@ -558,29 +602,18 @@ Data sourced from **Central Ground Water Board (CGWB)**, Ministry of Jal Shakti 
 | Trend Analytics | ✅ Done | Multi-year extraction/recharge/stage charts |
 | Risk Scoring | ✅ Done | AI-derived 0-100 risk scores per state |
 | Intelligence Reports | ✅ Done | Configurable report generation |
+| Water Quality | ✅ Done | BIS standards, state/district assessment |
 | Learning Center | ✅ Done | CGWB criteria + bilingual educational content |
 | 108 Automated Tests | ✅ Done | Geo, router, calc, DB, SQL injection, hallucination |
 
 ### Upcoming Features
 
-#### Phase 20: Water Quality & Levels
-- [ ] Groundwater quality data integration (fluoride, arsenic, nitrate, iron, TDS)
-- [ ] Pre/post monsoon water level tracking
-- [ ] Quality heatmap overlays on map
-- [ ] Contamination risk alerts
-
-#### Phase 21: Advanced Analytics
+#### Phase 22: Advanced Analytics
 - [ ] Predictive modeling — forecast extraction trends 5 years ahead
 - [ ] Anomaly detection — flag unusual extraction spikes
 - [ ] District-level heatmaps with drill-down
 - [ ] Water budget calculator — input area, get recharge/extraction estimates
 - [ ] Satellite data integration (NASA GRACE groundwater storage)
-
-#### Phase 22: User Features
-- [ ] User authentication (JWT-based via Supabase Auth)
-- [ ] Saved queries and bookmarks
-- [ ] Custom dashboards — pin favorite states/districts
-- [ ] Alert system — email/SMS when extraction crosses threshold
 
 #### Phase 23: Data Expansion
 - [ ] Real-time CGWB data sync (webhook/API polling)
