@@ -190,21 +190,21 @@ export default function Overview() {
           loop={false}
         />
         <div className="ov-hero-video-overlay" />
-        <div className="eyebrow animate-fade-rise">
+        <div className="eyebrow">
           CGWB · IN-GRES · National Assessment {coverage?.assessment_years.at(-1) ?? 2025}
         </div>
-        <h1 className="hero-title animate-fade-rise">
+        <h1 className="hero-title">
           <span className="brand-hindi">जल</span>
           <span className="hero-title-line2">DRISTHI</span>
         </h1>
-        <div className="hero-tagline animate-fade-rise-delay">जल संरक्षण • जल संवर्धन • जल समृद्धि</div>
-        <p className="hero-sub animate-fade-rise-delay">
+        <div className="hero-tagline">जल संरक्षण • जल संवर्धन • जल समृद्धि</div>
+        <p className="hero-sub">
           Groundwater Intelligence for a Sustainable India
         </p>
-        <p className="hero-sub-hindi animate-fade-rise-delay">
+        <p className="hero-sub-hindi">
           टिकाऊ भारत के लिए भूजल बुद्धिमत्ता। AI, स्थानिक विश्लेषण और ऐतिहासिक डेटा के माध्यम से भूजल का अन्वेषण करें।
         </p>
-        <div className="hero-meta animate-fade-rise-delay-2">
+        <div className="hero-meta">
           <div className="hero-meta-item">
             <span className="hero-meta-label">States / UTs</span>
             <span className="hero-meta-value">{coverage?.states_covered ?? 0}</span>

@@ -13,7 +13,7 @@ export default function ProtectedRoute({ children, requireAuth = true }: Protect
 
   if (loading) {
     return (
-      <div className="auth-page">
+      <div className="auth-page" style={{ background: "#0a1628" }}>
         <div className="auth-card">
           <div className="auth-loading">
             <div className="auth-spinner" />

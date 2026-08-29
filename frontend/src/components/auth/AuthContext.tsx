@@ -37,17 +37,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
-    // Get session first
+    // Get session first, but don't mark loading=false yet
+    // onAuthStateChange with INITIAL_SESSION will do that
     supabase.auth.getSession().then(({ data: { session: s } }) => {
       setSession(s);
       setUser(s?.user ?? null);
       if (s?.user) checkProfile(s.user.id);
-      initialSessionChecked.current = true;
-      setLoading(false);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event: string, s: Session | null) => {
-      // Ignore SIGNED_OUT before initial session is loaded
       if (!initialSessionChecked.current && event === "SIGNED_OUT") {
         return;
       }
@@ -61,7 +59,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     });
 
-    return () => subscription.unsubscribe();
+    // Fallback: if onAuthStateChange never fires within 2s, stop loading
+    const fallback = setTimeout(() => {
+      if (!initialSessionChecked.current) {
+        initialSessionChecked.current = true;
+        setLoading(false);
+      }
+    }, 2000);
+
+    return () => {
+      subscription.unsubscribe();
+      clearTimeout(fallback);
+    };
   }, []);
 
   const signInWithGoogle = async () => {

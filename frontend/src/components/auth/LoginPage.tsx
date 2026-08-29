@@ -1,8 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAuth } from "./AuthContext";
 import { supabase } from "../../lib/supabase";
 
 type AuthView = "login" | "otp-sent" | "profile-complete";
+
+const AUTH_VIDEO_URL =
+  "https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260328_083109_283f3553-e28f-428b-a723-d639c617eb2b.mp4";
 
 export default function LoginPage() {
   const { signInWithGoogle, signInWithOtp, verifyOtp, user } = useAuth();
@@ -12,6 +15,60 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [countdown, setCountdown] = useState(0);
+
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const animFrameRef = useRef<number>(0);
+  const [videoOpacity, setVideoOpacity] = useState(0);
+
+  useEffect(() => {
+    const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (prefersReduced) return;
+
+    const video = videoRef.current;
+    if (!video) return;
+
+    const FADE_DURATION = 0.5;
+
+    const tick = () => {
+      if (video.paused || video.ended) return;
+      const { currentTime, duration } = video;
+      if (!duration) {
+        animFrameRef.current = requestAnimationFrame(tick);
+        return;
+      }
+      const remaining = duration - currentTime;
+      if (currentTime < FADE_DURATION) {
+        setVideoOpacity(currentTime / FADE_DURATION);
+      } else if (remaining < FADE_DURATION) {
+        setVideoOpacity(remaining / FADE_DURATION);
+      } else {
+        setVideoOpacity(1);
+      }
+      animFrameRef.current = requestAnimationFrame(tick);
+    };
+
+    const onPlay = () => {
+      animFrameRef.current = requestAnimationFrame(tick);
+    };
+
+    const onEnded = () => {
+      setVideoOpacity(0);
+      setTimeout(() => {
+        video.currentTime = 0;
+        video.play();
+      }, 100);
+    };
+
+    video.addEventListener("play", onPlay);
+    video.addEventListener("ended", onEnded);
+    video.play().catch(() => {});
+
+    return () => {
+      cancelAnimationFrame(animFrameRef.current);
+      video.removeEventListener("play", onPlay);
+      video.removeEventListener("ended", onEnded);
+    };
+  }, []);
 
   // Profile completion fields
   const [fullName, setFullName] = useState(user?.user_metadata?.full_name || user?.user_metadata?.name || "");
@@ -138,6 +195,16 @@ export default function LoginPage() {
 
   return (
     <div className="auth-page">
+      <video
+        ref={videoRef}
+        className="auth-bg-video"
+        style={{ opacity: videoOpacity }}
+        src={AUTH_VIDEO_URL}
+        muted
+        playsInline
+        loop={false}
+      />
+      <div className="auth-bg-overlay" />
       <div className="auth-card">
         <div className="auth-brand">
           <div className="auth-logo">

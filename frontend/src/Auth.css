@@ -5,42 +5,29 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background:
-    radial-gradient(ellipse at 20% 50%, rgba(26, 82, 118, 0.4) 0%, transparent 60%),
-    radial-gradient(ellipse at 80% 20%, rgba(39, 174, 96, 0.15) 0%, transparent 50%),
-    radial-gradient(ellipse at 60% 80%, rgba(15, 23, 42, 0.8) 0%, transparent 60%),
-    linear-gradient(160deg, #070e1a 0%, #0c1929 25%, #0f1f38 50%, #0a1628 75%, #060d18 100%);
+  background: #0a1628;
   padding: var(--sp-5);
   position: relative;
   overflow: hidden;
 }
 
-.auth-page::before {
-  content: "";
+.auth-bg-video {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 0;
+  opacity: 0;
+}
+
+.auth-bg-overlay {
   position: absolute;
   inset: 0;
-  background:
-    radial-gradient(circle at 15% 85%, rgba(26, 82, 118, 0.12) 0%, transparent 40%),
-    radial-gradient(circle at 85% 15%, rgba(39, 174, 96, 0.08) 0%, transparent 40%);
+  background: rgba(10, 22, 40, 0.55);
+  z-index: 1;
   pointer-events: none;
-}
-
-.auth-page::after {
-  content: "";
-  position: absolute;
-  top: -50%;
-  left: -50%;
-  width: 200%;
-  height: 200%;
-  background:
-    repeating-conic-gradient(from 0deg at 50% 50%, transparent 0deg, rgba(255,255,255,0.008) 1deg, transparent 2deg);
-  animation: authShimmer 60s linear infinite;
-  pointer-events: none;
-}
-
-@keyframes authShimmer {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
 }
 
 .auth-card {
@@ -401,23 +388,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background:
-    radial-gradient(ellipse at 20% 50%, rgba(26, 82, 118, 0.4) 0%, transparent 60%),
-    radial-gradient(ellipse at 80% 20%, rgba(39, 174, 96, 0.15) 0%, transparent 50%),
-    radial-gradient(ellipse at 60% 80%, rgba(15, 23, 42, 0.8) 0%, transparent 60%),
-    linear-gradient(160deg, #070e1a 0%, #0c1929 25%, #0f1f38 50%, #0a1628 75%, #060d18 100%);
+  background: #0a1628;
   padding: var(--sp-5);
   position: relative;
-}
-
-.profile-page::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background:
-    radial-gradient(circle at 15% 85%, rgba(26, 82, 118, 0.12) 0%, transparent 40%),
-    radial-gradient(circle at 85% 15%, rgba(39, 174, 96, 0.08) 0%, transparent 40%);
-  pointer-events: none;
 }
 
 .profile-card {

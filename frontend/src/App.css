@@ -938,7 +938,7 @@
 .kpi {
   background: var(--panel);
   padding: 20px 22px 18px;
-  animation: fade-rise 0.8s ease-out backwards;
+  animation: fadeUp 0.4s ease backwards;
   min-height: 156px;
   display: flex;
   flex-direction: column;
@@ -946,11 +946,6 @@
   border-right: 1px solid var(--panel-line);
   position: relative;
 }
-
-.kpi:nth-child(1) { animation-delay: 0.1s; }
-.kpi:nth-child(2) { animation-delay: 0.2s; }
-.kpi:nth-child(3) { animation-delay: 0.3s; }
-.kpi:nth-child(4) { animation-delay: 0.4s; }
 
 .kpi::before {
   content: "";
