@@ -25,7 +25,7 @@
 .auth-bg-overlay {
   position: absolute;
   inset: 0;
-  background: rgba(10, 22, 40, 0.55);
+  background: rgba(10, 22, 40, 0.3);
   z-index: 1;
   pointer-events: none;
 }
@@ -33,17 +33,17 @@
 .auth-card {
   width: 100%;
   max-width: 440px;
-  background: rgba(15, 25, 45, 0.85);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(10, 22, 40, 0.45);
+  backdrop-filter: blur(24px) saturate(1.4);
+  -webkit-backdrop-filter: blur(24px) saturate(1.4);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: var(--radius-md);
   padding: var(--sp-8);
   box-shadow:
-    0 20px 60px rgba(0, 0, 0, 0.4),
-    0 0 0 1px rgba(255, 255, 255, 0.03) inset;
+    0 20px 60px rgba(0, 0, 0, 0.3),
+    0 0 0 1px rgba(255, 255, 255, 0.04) inset;
   position: relative;
-  z-index: 1;
+  z-index: 2;
 }
 
 .auth-brand {
@@ -138,14 +138,14 @@
 }
 
 .auth-btn-google {
-  background: rgba(255, 255, 255, 0.06);
-  border-color: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.18);
   color: #e8f0f4;
 }
 
 .auth-btn-google:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.16);
+  border-color: rgba(255, 255, 255, 0.28);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
 }
 
@@ -213,11 +213,11 @@
 .auth-phone-input {
   display: flex;
   align-items: center;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: var(--radius-sm);
   overflow: hidden;
   transition: border-color 0.2s;
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(255, 255, 255, 0.07);
 }
 
 .auth-phone-input:focus-within {
@@ -251,12 +251,12 @@
 .auth-text-input {
   width: 100%;
   padding: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: var(--radius-sm);
   font-family: var(--font-ui);
   font-size: 14px;
   color: #e8f0f4;
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(255, 255, 255, 0.07);
   outline: none;
   transition: border-color 0.2s;
   box-sizing: border-box;
@@ -391,22 +391,23 @@
   background: #0a1628;
   padding: var(--sp-5);
   position: relative;
+  overflow: hidden;
 }
 
 .profile-card {
   width: 100%;
   max-width: 500px;
-  background: rgba(15, 25, 45, 0.85);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(10, 22, 40, 0.45);
+  backdrop-filter: blur(24px) saturate(1.4);
+  -webkit-backdrop-filter: blur(24px) saturate(1.4);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: var(--radius-md);
   overflow: hidden;
   box-shadow:
-    0 20px 60px rgba(0, 0, 0, 0.4),
-    0 0 0 1px rgba(255, 255, 255, 0.03) inset;
+    0 20px 60px rgba(0, 0, 0, 0.3),
+    0 0 0 1px rgba(255, 255, 255, 0.04) inset;
   position: relative;
-  z-index: 1;
+  z-index: 2;
 }
 
 .profile-header {
@@ -498,12 +499,12 @@
 
 .profile-input {
   padding: 8px 12px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: var(--radius-sm);
   font-family: var(--font-ui);
   font-size: 13px;
   color: #e8f0f4;
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(255, 255, 255, 0.07);
   outline: none;
   width: 200px;
   transition: border-color 0.2s;
