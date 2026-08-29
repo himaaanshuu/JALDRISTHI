@@ -1,17 +1,15 @@
 """
-JAL-DRISHTI AI — Groundwater Demo Data Seed Script
+JAL-DRISHTI — Groundwater Data Seed Script (Legacy)
 ===================================================
-PROTOTYPE DEMONSTRATION DATA ONLY
-----------------------------------
-This script generates synthetic groundwater assessment data
-for prototype testing and UI development purposes.
+This script was used during early development to generate synthetic data
+for UI testing. It should NOT be used with the production database.
 
-Data is modeled after CGWB (Central Ground Water Board) patterns
-but does NOT represent actual field measurements.
+Production data is sourced directly from CGWB (Central Ground Water Board)
+National Compilation publications and imported via import_ingres_data.py.
 
 Usage:
-    python seed_groundwater.py          # Seeds the database
-    python seed_groundwater.py --reset  # Drops and re-seeds
+    python seed_groundwater.py          # Seeds the database (development only)
+    python seed_groundwater.py --reset  # Drops and re-seeds (development only)
 """
 
 import sys

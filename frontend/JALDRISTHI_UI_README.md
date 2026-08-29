@@ -36,18 +36,11 @@ keep (e.g. routing, providers, existing global styles), merge rather than
 overwrite — the important part is that `App.css`'s `:root` tokens load once,
 globally.
 
-## Wiring up real data
+## Data Sources
 
-All groundwater figures currently live in `src/data/states.ts` as placeholder
-values. To connect to your backend:
-
-1. Replace the static `states` array with a fetch/query hook (e.g. React
-   Query, SWR, or a plain `useEffect`) that pulls from your CGWB/IN-GRES API
-   and maps the response into the same `StateData` shape.
-2. `IndiaMap` and every view component already read from that shape, so no
-   further changes are needed downstream — just swap the data source.
-3. The AI Assistant view (`AIAssistant.tsx`) has one hardcoded example
-   exchange — replace it with your actual assistant/chat state and API calls.
+Groundwater data is sourced from CGWB (Central Ground Water Board) National Compilation
+publications and served via the Supabase PostgreSQL backend. The `src/data/states.ts` file
+contains simplified overview data for the SVG map visualization.
 
 ## Map
 
