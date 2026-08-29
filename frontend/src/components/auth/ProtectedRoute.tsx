@@ -9,9 +9,9 @@ interface ProtectedRouteProps {
 }
 
 export default function ProtectedRoute({ children, requireAuth = true }: ProtectedRouteProps) {
-  const { session, loading, profileComplete } = useAuth();
+  const { session, loading, profileComplete, profileChecked } = useAuth();
 
-  if (loading) {
+  if (loading || (session && !profileChecked)) {
     return null;
   }
 

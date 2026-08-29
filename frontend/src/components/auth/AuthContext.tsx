@@ -7,6 +7,7 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   profileComplete: boolean;
+  profileChecked: boolean;
   signInWithGoogle: () => Promise<void>;
   signInWithOtp: (phone: string) => Promise<{ error?: string }>;
   verifyOtp: (phone: string, token: string) => Promise<{ error?: string }>;
@@ -21,6 +22,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [profileComplete, setProfileComplete] = useState(false);
+  const [profileChecked, setProfileChecked] = useState(false);
   const initialSessionChecked = useRef(false);
 
   const checkProfile = async (userId: string) => {
@@ -33,6 +35,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setProfileComplete(!!data?.full_name);
     } catch {
       setProfileComplete(false);
+    } finally {
+      setProfileChecked(true);
     }
   };
 
@@ -52,7 +56,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession(s);
       setUser(s?.user ?? null);
       if (s?.user) checkProfile(s.user.id);
-      else setProfileComplete(false);
+      else {
+        setProfileComplete(false);
+        setProfileChecked(true);
+      }
       if (!initialSessionChecked.current) {
         initialSessionChecked.current = true;
         setLoading(false);
@@ -120,6 +127,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user,
         loading,
         profileComplete,
+        profileChecked,
         signInWithGoogle,
         signInWithOtp,
         verifyOtp,
