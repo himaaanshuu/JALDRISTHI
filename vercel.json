@@ -2,17 +2,8 @@
   "buildCommand": "bash prebuild.sh",
   "outputDirectory": ".",
   "installCommand": "npm install --prefix frontend",
-  "functions": {
-    "api/index.py": {
-      "runtime": "@vercel/python@4",
-      "maxDuration": 30
-    }
-  },
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/index.py" },
     { "source": "/((?!api/).*)", "destination": "/index.html" }
-  ],
-  "env": {
-    "USE_SUPABASE": "true"
-  }
+  ]
 }
