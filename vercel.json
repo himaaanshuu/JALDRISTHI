@@ -4,7 +4,7 @@
   "installCommand": "npm install --prefix frontend",
   "functions": {
     "api/index.py": {
-      "runtime": "@vercel/python@3",
+      "runtime": "@vercel/python@4",
       "maxDuration": 30
     }
   },
