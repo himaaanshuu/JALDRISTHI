@@ -4,9 +4,14 @@ All environment variables and settings in one place.
 """
 
 import os
+from pathlib import Path
 from dotenv import load_dotenv
 
-load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"))
+# On Vercel, .env doesn't exist — env vars are set via dashboard
+# Locally, load from project root .env
+_env_path = Path(__file__).resolve().parent.parent / ".env"
+if _env_path.exists():
+    load_dotenv(_env_path)
 
 # ─── Database ───────────────────────────────────────────────────────────────
 
