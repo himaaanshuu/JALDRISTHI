@@ -1,0 +1,498 @@
+/* ==========================================================================
+   JALDRISTHI — Landing Page (EcoVolta V2 inspired)
+   Scoped under .jd-landing. No leak into dashboard styles.
+   ========================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600&display=swap');
+
+/* ---------------------------------------------------------------------- */
+/* Tokens                                                                  */
+/* ---------------------------------------------------------------------- */
+
+.jd-landing {
+  --jd-black: #05080a;
+  --jd-dark: #071a12;
+  --jd-green-deep: #0c2a1c;
+  --jd-green-mid: #1a4a35;
+  --jd-green-soft: #3a7a5a;
+  --jd-teal: #6abfaa;
+  --jd-teal-bright: #8edcc8;
+  --jd-off-white: #e8ede9;
+  --jd-off-white-dim: #8a9a8e;
+  --jd-line: rgba(232, 237, 233, 0.1);
+  --jd-serif: 'Instrument Serif', 'Georgia', serif;
+  --jd-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+
+  position: relative;
+  background: var(--jd-black);
+  color: var(--jd-off-white);
+  font-family: var(--jd-sans);
+  overflow-x: hidden;
+}
+
+.jd-landing *, *::before, *::after { box-sizing: border-box; }
+.jd-landing a { color: inherit; text-decoration: none; }
+
+/* ---------------------------------------------------------------------- */
+/* Canvas background                                                       */
+/* ---------------------------------------------------------------------- */
+
+.jd-canvas {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Nav                                                                     */
+/* ---------------------------------------------------------------------- */
+
+.jd-nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 22px clamp(24px, 5vw, 64px);
+  transition: padding 0.4s ease, background 0.4s ease, backdrop-filter 0.4s ease;
+}
+
+.jd-nav--scrolled {
+  padding-top: 14px;
+  padding-bottom: 14px;
+  background: rgba(5, 8, 10, 0.6);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.jd-nav__brand {
+  flex-shrink: 0;
+}
+
+.jd-brand-text {
+  font-family: var(--jd-serif);
+  font-size: 1.15rem;
+  letter-spacing: 0.04em;
+  color: var(--jd-off-white);
+}
+
+.jd-nav__center {
+  display: flex;
+  align-items: center;
+  gap: clamp(20px, 3vw, 40px);
+  font-size: 0.88rem;
+  color: var(--jd-off-white-dim);
+}
+
+.jd-nav__center a,
+.jd-nav__center button {
+  background: none;
+  border: none;
+  font-family: var(--jd-sans);
+  font-size: inherit;
+  color: inherit;
+  cursor: pointer;
+  padding: 0;
+  transition: color 0.25s ease;
+}
+
+.jd-nav__center a:hover,
+.jd-nav__center button:hover {
+  color: var(--jd-off-white);
+}
+
+.jd-nav__right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.jd-nav__login {
+  background: none;
+  border: 1px solid var(--jd-line);
+  color: var(--jd-off-white);
+  font-family: var(--jd-sans);
+  font-size: 0.85rem;
+  padding: 8px 20px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: border-color 0.25s ease, background 0.25s ease;
+}
+
+.jd-nav__login:hover {
+  border-color: rgba(232, 237, 233, 0.3);
+  background: rgba(232, 237, 233, 0.05);
+}
+
+.jd-nav__signup {
+  background: var(--jd-off-white);
+  color: var(--jd-black);
+  border: none;
+  font-family: var(--jd-sans);
+  font-size: 0.85rem;
+  font-weight: 500;
+  padding: 8px 20px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: opacity 0.25s ease;
+}
+
+.jd-nav__signup:hover {
+  opacity: 0.88;
+}
+
+.jd-nav__burger {
+  display: none;
+  flex-direction: column;
+  gap: 5px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 8px;
+}
+
+.jd-nav__burger span {
+  width: 20px;
+  height: 1.5px;
+  background: var(--jd-off-white);
+  border-radius: 1px;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Hero                                                                    */
+/* ---------------------------------------------------------------------- */
+
+.jd-hero {
+  position: relative;
+  z-index: 1;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 120px 24px 80px;
+}
+
+.jd-hero__content {
+  max-width: 680px;
+  text-align: center;
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.9s ease, transform 0.9s ease;
+}
+
+.jd-hero__content.is-in-view {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.jd-hero__title {
+  font-family: var(--jd-serif);
+  font-weight: 400;
+  font-size: clamp(2.4rem, 5.5vw, 4.2rem);
+  line-height: 1.12;
+  margin: 0 0 24px;
+  color: var(--jd-off-white);
+}
+
+.jd-hero__title em {
+  font-style: italic;
+  color: var(--jd-teal-bright);
+}
+
+.jd-hero__sub {
+  font-size: clamp(0.95rem, 1.4vw, 1.1rem);
+  line-height: 1.65;
+  color: var(--jd-off-white-dim);
+  margin: 0 0 36px;
+  max-width: 52ch;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.jd-hero__cta {
+  display: flex;
+  justify-content: center;
+}
+
+/* ---------------------------------------------------------------------- */
+/* CTA button                                                              */
+/* ---------------------------------------------------------------------- */
+
+.jd-cta-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--jd-off-white);
+  color: var(--jd-black);
+  border: none;
+  font-family: var(--jd-sans);
+  font-size: 0.92rem;
+  font-weight: 500;
+  padding: 14px 32px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: opacity 0.25s ease, background 0.25s ease, color 0.25s ease;
+}
+
+.jd-cta-btn:hover {
+  opacity: 0.88;
+}
+
+.jd-cta-btn--outline {
+  background: transparent;
+  color: var(--jd-off-white);
+  border: 1px solid var(--jd-line);
+}
+
+.jd-cta-btn--outline:hover {
+  border-color: rgba(232, 237, 233, 0.3);
+  background: rgba(232, 237, 233, 0.05);
+  opacity: 1;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Features                                                                */
+/* ---------------------------------------------------------------------- */
+
+.jd-features {
+  position: relative;
+  z-index: 1;
+  padding: 100px clamp(24px, 6vw, 80px);
+}
+
+.jd-features__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1px;
+  background: var(--jd-line);
+  border: 1px solid var(--jd-line);
+  border-radius: 12px;
+  overflow: hidden;
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.jd-feature-card {
+  background: rgba(5, 10, 8, 0.7);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  padding: 36px 30px;
+  opacity: 0;
+  transform: translateY(14px);
+  transition: opacity 0.7s ease, transform 0.7s ease, background 0.3s ease;
+}
+
+.jd-feature-card.is-in-view {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.jd-feature-card:hover {
+  background: rgba(15, 30, 22, 0.8);
+}
+
+.jd-feature-icon {
+  width: 36px;
+  height: 36px;
+  color: var(--jd-teal);
+  margin-bottom: 18px;
+}
+
+.jd-feature-icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+.jd-feature-card h3 {
+  font-family: var(--jd-serif);
+  font-weight: 400;
+  font-size: 1.2rem;
+  margin: 0 0 10px;
+  color: var(--jd-off-white);
+}
+
+.jd-feature-card p {
+  font-size: 0.85rem;
+  line-height: 1.6;
+  color: var(--jd-off-white-dim);
+  margin: 0;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Bottom CTA                                                              */
+/* ---------------------------------------------------------------------- */
+
+.jd-bottom {
+  position: relative;
+  z-index: 1;
+  text-align: center;
+  padding: 120px 24px;
+  opacity: 0;
+  transform: translateY(16px);
+  transition: opacity 0.8s ease, transform 0.8s ease;
+}
+
+.jd-bottom.is-in-view {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.jd-bottom h2 {
+  font-family: var(--jd-serif);
+  font-weight: 400;
+  font-size: clamp(1.8rem, 4vw, 3rem);
+  line-height: 1.2;
+  margin: 0 0 36px;
+  color: var(--jd-off-white);
+}
+
+.jd-bottom em {
+  font-style: italic;
+  color: var(--jd-teal-bright);
+}
+
+.jd-bottom__cta {
+  display: flex;
+  justify-content: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Footer                                                                  */
+/* ---------------------------------------------------------------------- */
+
+.jd-footer {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 40px 24px 48px;
+  border-top: 1px solid var(--jd-line);
+}
+
+.jd-footer__brand {
+  font-family: var(--jd-serif);
+  font-size: 0.95rem;
+  color: var(--jd-off-white-dim);
+}
+
+.jd-footer__copy {
+  font-size: 0.75rem;
+  color: var(--jd-off-white-dim);
+  opacity: 0.5;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Reveal helper (global within .jd-landing)                               */
+/* ---------------------------------------------------------------------- */
+
+[data-reveal] {
+  opacity: 0;
+  transform: translateY(16px);
+  transition: opacity 0.8s ease, transform 0.8s ease;
+}
+
+[data-reveal].is-in-view {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ---------------------------------------------------------------------- */
+/* Reduced motion                                                          */
+/* ---------------------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .jd-landing * {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.15s !important;
+  }
+  [data-reveal] {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ---------------------------------------------------------------------- */
+/* Responsive                                                              */
+/* ---------------------------------------------------------------------- */
+
+@media (max-width: 900px) {
+  .jd-nav__center {
+    position: fixed;
+    top: 0;
+    right: 0;
+    height: 100vh;
+    width: min(78vw, 300px);
+    background: rgba(5, 10, 8, 0.96);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-left: 1px solid var(--jd-line);
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 28px;
+    padding: 40px;
+    transform: translateX(100%);
+    transition: transform 0.4s ease;
+    z-index: 30;
+  }
+
+  .jd-nav__center.is-open {
+    transform: translateX(0);
+  }
+
+  .jd-nav__right {
+    position: fixed;
+    bottom: 0;
+    right: 0;
+    width: min(78vw, 300px);
+    background: rgba(5, 10, 8, 0.96);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-left: 1px solid var(--jd-line);
+    border-top: 1px solid var(--jd-line);
+    flex-direction: row;
+    justify-content: center;
+    gap: 12px;
+    padding: 20px;
+    transform: translateX(100%);
+    transition: transform 0.4s ease;
+    z-index: 30;
+  }
+
+  .jd-nav__right.is-open {
+    transform: translateX(0);
+  }
+
+  .jd-nav__burger {
+    display: flex;
+    z-index: 31;
+  }
+}
+
+@media (max-width: 639px) {
+  .jd-hero {
+    padding: 100px 20px 60px;
+  }
+
+  .jd-features {
+    padding: 60px 16px;
+  }
+
+  .jd-features__grid {
+    grid-template-columns: 1fr;
+  }
+
+  .jd-bottom {
+    padding: 80px 20px;
+  }
+}

@@ -127,6 +127,9 @@ jaldrishti/
 │   │   │       ├── DataSources.tsx  # Data provenance
 │   │   │       ├── Learning.tsx     # CGWB classification + groundwater knowledge center
 │   │   │       └── WaterQuality.tsx # BIS water quality standards & assessment
+│   │   │   └── Landing/
+│   │   │       ├── LandingPage.tsx  # Public landing page with nature canvas + auth CTAs
+│   │   │       └── LandingPage.css  # Scoped styles, EcoVolta V2 inspired
 │   │   ├── data/
 │   │   │   ├── stateMap.ts      # GeoJSON↔DB name mapping, status colors, color scales
 │   │   │   └── states.ts       # Simplified state overview data for the SVG map
@@ -149,6 +152,35 @@ jaldrishti/
 - **Git**
 - **Ollama** (for AI chat) — https://ollama.ai
 - **Supabase account** (free tier works) — https://supabase.com
+
+---
+
+## Quick Start
+
+```bash
+# 1. Clone
+git clone https://github.com/himaaanshuu/JALDRISTHI.git
+cd JALDRISTHI
+
+# 2. Backend
+cd backend
+python3 -m venv venv && source venv/bin/activate
+pip install -r requirements.txt
+
+# 3. Frontend
+cd ../frontend
+npm install
+
+# 4. Start both (from project root)
+# Terminal 1 — Backend
+cd backend && python3 -m uvicorn main:app --host 0.0.0.0 --port 8000
+
+# Terminal 2 — Frontend
+cd frontend && npx vite --host 0.0.0.0 --port 5173
+```
+
+- **Landing page**: http://localhost:5173
+- **Backend API**: http://localhost:8000
 
 ---
 

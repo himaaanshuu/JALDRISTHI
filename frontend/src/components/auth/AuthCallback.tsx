@@ -2,22 +2,34 @@ import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../../lib/supabase";
 
+function getRedirectPath(): string {
+  const intent = localStorage.getItem("jd-auth-intent");
+  const target = localStorage.getItem("jd-auth-target");
+  if (intent) {
+    localStorage.removeItem("jd-auth-intent");
+    localStorage.removeItem("jd-auth-target");
+    if (intent === "signup") return "/profile";
+    if (target) return target;
+    return "/dashboard";
+  }
+  if (target) {
+    localStorage.removeItem("jd-auth-target");
+    return target;
+  }
+  return "/";
+}
+
 export default function AuthCallback() {
   const navigate = useNavigate();
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
-        navigate("/", { replace: true });
+        navigate(getRedirectPath(), { replace: true });
       } else {
-        // Wait a moment for the session to be set
         const timer = setTimeout(() => {
-          supabase.auth.getSession().then(({ data: { session: s } }) => {
-            if (s) {
-              navigate("/", { replace: true });
-            } else {
-              navigate("/", { replace: true });
-            }
+          supabase.auth.getSession().then(() => {
+            navigate(getRedirectPath(), { replace: true });
           });
         }, 1000);
         return () => clearTimeout(timer);

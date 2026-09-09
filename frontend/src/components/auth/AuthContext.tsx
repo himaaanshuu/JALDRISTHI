@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, useRef, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, useRef, useCallback, type ReactNode } from "react";
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "../../lib/supabase";
 
@@ -13,6 +13,8 @@ interface AuthContextType {
   verifyOtp: (phone: string, token: string) => Promise<{ error?: string }>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
+  pendingRedirect: string | null;
+  consumeRedirect: () => string | null;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -23,7 +25,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [profileComplete, setProfileComplete] = useState(false);
   const [profileChecked, setProfileChecked] = useState(false);
+  const [pendingRedirect, setPendingRedirect] = useState<string | null>(null);
   const initialSessionChecked = useRef(false);
+
+  const consumeRedirect = useCallback(() => {
+    const path = pendingRedirect;
+    setPendingRedirect(null);
+    return path;
+  }, [pendingRedirect]);
 
   const checkProfile = async (userId: string) => {
     try {
@@ -63,6 +72,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!initialSessionChecked.current) {
         initialSessionChecked.current = true;
         setLoading(false);
+      }
+
+      // Handle post-login redirect based on intent stored by landing page
+      if (s?.user && (event === "SIGNED_IN" || event === "INITIAL_SESSION")) {
+        const intent = localStorage.getItem("jd-auth-intent");
+        const target = localStorage.getItem("jd-auth-target");
+        if (intent) {
+          localStorage.removeItem("jd-auth-intent");
+          localStorage.removeItem("jd-auth-target");
+          if (intent === "signup") {
+            setPendingRedirect("/profile");
+          } else if (target) {
+            setPendingRedirect(target);
+          } else {
+            setPendingRedirect("/dashboard");
+          }
+        }
       }
     });
 
@@ -133,6 +159,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         verifyOtp,
         signOut,
         refreshProfile,
+        pendingRedirect,
+        consumeRedirect,
       }}
     >
       {children}

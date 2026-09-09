@@ -1,9 +1,10 @@
-import { useState } from "react";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { AuthProvider } from "./components/auth/AuthContext";
+import { useState, useEffect } from "react";
+import { BrowserRouter, Routes, Route, useNavigate } from "react-router-dom";
+import { AuthProvider, useAuth } from "./components/auth/AuthContext";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import AuthCallback from "./components/auth/AuthCallback";
 import ProfilePage from "./components/auth/ProfilePage";
+import LandingPage from "./components/Landing/LandingPage";
 import Sidebar from "./components/Sidebar";
 import Topbar from "./components/Topbar";
 import Overview from "./components/views/Overview";
@@ -18,6 +19,20 @@ import WaterQuality from "./components/views/WaterQuality";
 import type { ViewKey } from "./data/states";
 import "./App.css";
 import "./Auth.css";
+
+function PostLoginRedirect() {
+  const { consumeRedirect } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const path = consumeRedirect();
+    if (path) {
+      navigate(path, { replace: true });
+    }
+  }, [consumeRedirect, navigate]);
+
+  return null;
+}
 
 function MainApp() {
   const [view, setView] = useState<ViewKey>("overview");
@@ -53,7 +68,9 @@ export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
+        <PostLoginRedirect />
         <Routes>
+          <Route path="/" element={<LandingPage />} />
           <Route path="/auth/callback" element={<AuthCallback />} />
           <Route
             path="/profile"
